@@ -32,7 +32,7 @@ llm = ChatGroq(
 
 
 @tool
-def add_product(name: str, sell_price: float, stock_qty: int, min_stock: int = 10) -> str:
+def add_product(name: str, sell_price: float = 0, stock_qty: int = 0, min_stock: int = 10) -> str:
     """Tambah produk baru ke database.
     Gunakan tool ini ketika user ingin menambahkan produk/barang baru.
 
@@ -42,6 +42,23 @@ def add_product(name: str, sell_price: float, stock_qty: int, min_stock: int = 1
         stock_qty: Jumlah stok awal
         min_stock: Batas minimum stok (default 10)
     """
+    # Guard: LLM sometimes passes entire JSON as the 'name' argument
+    if sell_price == 0 and stock_qty == 0 and name.strip().startswith("{"):
+        try:
+            parsed = json.loads(name)
+            if isinstance(parsed, dict):
+                name = parsed.get("name", name)
+                sell_price = float(parsed.get("sell_price", 0))
+                stock_qty = int(parsed.get("stock_qty", 0))
+                min_stock = int(parsed.get("min_stock", 10))
+        except (json.JSONDecodeError, ValueError):
+            pass
+
+    if sell_price <= 0:
+        return "[ERROR] Harga jual (sell_price) harus lebih dari 0."
+    if stock_qty <= 0:
+        return "[ERROR] Jumlah stok (stock_qty) harus lebih dari 0."
+
     db = SessionLocal()
     try:
         # Check if product already exists
@@ -90,7 +107,7 @@ def list_products() -> str:
 
 
 @tool
-def create_invoice(customer_name: str, items: list[dict]) -> str:
+def create_invoice(customer_name: str, items: list[dict] = None) -> str:
     """Buat faktur baru dan otomatis kurangi stok produk.
     Gunakan tool ini ketika user ingin membuat faktur/invoice.
 
@@ -99,6 +116,19 @@ def create_invoice(customer_name: str, items: list[dict]) -> str:
         items: List of items, each with 'product_name' and 'quantity'.
                Example: [{"product_name": "Kopi Arabica", "quantity": 10}]
     """
+    # Guard: LLM sometimes passes entire JSON as the 'customer_name' argument
+    if items is None and customer_name.strip().startswith("{"):
+        try:
+            parsed = json.loads(customer_name)
+            if isinstance(parsed, dict):
+                customer_name = parsed.get("customer_name", customer_name)
+                items = parsed.get("items", [])
+        except (json.JSONDecodeError, ValueError):
+            pass
+
+    if not items:
+        return "[ERROR] Items tidak boleh kosong. Berikan daftar produk dan jumlahnya."
+
     db = SessionLocal()
     try:
         # Generate invoice number

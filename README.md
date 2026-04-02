@@ -1,8 +1,8 @@
-# BizLedger AI
+# Ilost&Found AI
 
-> 💼 Pencatatan Keuangan Bisnis dengan AI Assistant
+> Menemukan barang hilang secara cepat dan mudah
 
-Aplikasi web pencatatan keuangan bisnis yang dilengkapi AI Assistant untuk mengelola **stok barang** dan **faktur** melalui perintah bahasa Indonesia.
+Aplikasi wweb ini dilengkapi AI Assistant untuk mengelola barang hilang dan barang ditemukan melalui perintah bahasa Indonesia. Sehingga pengguna dipermudah dalam menemukan barang yang hilang.
 
 ## Tech Stack
 
@@ -52,14 +52,48 @@ npm run dev
 
 ## AI Commands
 
-| Perintah | Contoh |
-|----------|--------|
-| Tambah produk | *"Tambah produk Kopi Arabica harga 75000 stok 100"* |
-| Lihat produk | *"Lihat semua produk"* |
-| Buat faktur | *"Buatkan faktur untuk Toko Makmur: 10 Kopi Arabica"* |
-| Lihat faktur | *"Lihat semua faktur"* |
-| Total penjualan | *"Berapa total penjualan hari ini?"* |
-| Stok menipis | *"Produk apa yang stoknya menipis?"* |
+### Dashboard
+| Fitur | Contoh | Contoh |
+|----------|--------|--------|
+| Dashboard + Search | Cari data di dashboard | *"Cari barang hilang dengan kata kunci dompet hitam"*|
+| Dashboard + Search (opsional) | Tampilkan ringkasan dashboard | *"Tampilkan statistik barang hilang dan temuan hari ini"*|
+| Dashboard + Search | Cari data di dashboard | *"Cari barang hilang dengan kata kunci dompet hitam"*|
+
+### GET: Barang Hilang
+| Fitur | Contoh | Contoh |
+|----------|--------|--------|
+| Get Barang Hilang | Lihat semua barang hilang | *"Tampilkan semua barang hilang"*|
+| Get Barang Hilang | Filter barang hilang | *"Tampilkan barang hilang kategori elektronik"*|
+
+### GET: Barang Temuan
+| Fitur | Contoh | Contoh |
+|----------|--------|--------|
+| Get Barang Temuan | Lihat semua barang temuan | *"Tampilkan semua barang temuan"*|
+| Get Barang Temuan | Filter barang temuan | *"Tampilkan barang temuan kategori aksesoris"*|
+
+### POST: Barang Hilang
+| Fitur | Contoh | Contoh |
+|----------|--------|--------|
+| Post Barang Hilang | Tambah barang Hilang | *"Laporkan barang hilang berupa HP di parkiran"*|
+| Post Barang Hilang | Tambah lokasi | *"Tambahkan lokasi terakhir kemungkinan di gedung A"*|
+| Post Barang Hilang (opsional) | Tambah Foto Barang | *"Tambahkan foto barang yang ditemukan"*|
+| Post Barang Hilang | Tambah Keterangan Tambahan | *"Tambahkan keterangan tambahan untuk barang ini, yaitu barang berwarna pink dan kategorinya berharga"*|
+
+### POST: Barang Temuan
+| Fitur | Contoh | Contoh |
+|----------|--------|--------|
+| Post Barang Temuan | Tambah barang Temuan | *"Laporkan barang temuan berupa HP di parkiran"*|
+| Post Barang Temuan | Tambah lokasi | *"Tambahkan lokasi ditemukan di gedung A"*|
+| Post Barang Temuan | Tambah waktu | *"Tambahkan waktu ditemukan di hari Senin 7 Februari 2026"*|
+| Post Barang Temuan | Tambah Foto Barang | *"Tambahkan foto barang yang ditemukan"*|
+| Post Barang Temuan | Tambah Keterangan Tambahan | *"Tambahkan keterangan tambahan untuk barang ini, yaitu barang berwarna pink dan kategorinya berharga"*|
+
+### Petugas Panel
+| Fitur | Contoh | Contoh |
+|----------|--------|--------|
+| Verifikasi Barang | Verifikasi laporan | *"Verifikasi laporan barang hilang ID 123"*|
+| Post Barang Temuan | Tambah lokasi | *"Tambahkan lokasi ditemukan di gedung A"*|
+| Post Barang Temuan | Tambah waktu | *"Tambahkan waktu ditemukan di hari Senin 7 Februari 2026"*|
 
 ## Project Structure
 
@@ -76,10 +110,14 @@ projectpabw/
     ├── src/
     │   ├── App.vue
     │   ├── components/
-    │   │   ├── AiChat.vue
-    │   │   ├── DashboardCards.vue
-    │   │   ├── ProductList.vue
-    │   │   └── InvoiceList.vue
+    |   |   ├── Login.vue
+    |   |   ├── Register.vue
+    |   |   ├── AdminDashboard.vue
+    │   │   ├── Dashboard.vue
+    |   |   ├── ProductLostPost.vue
+    |   |   ├── ProductFoundPost.vue
+    │   │   ├── ProductLostList.vue
+    │   │   └── ProductFoundList.vue
     │   └── services/api.js
     ├── nginx.conf
     └── Dockerfile

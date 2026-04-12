@@ -1,21 +1,47 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
-
-/* ── Design Tokens (Therawmaterials Aesthetic) ─────────────────────────────── */
+/* ── Design Tokens (ITK LostFound) ─────────────────────────────── */
 
 :root {
-  /* Warm Beige Background */
+  /* Background */
   --bg-color: #F2EEEA;
-  
-  /* Bold Solid Colors */
-  --color-orange: #FF4C26;
-  --color-purple: #5A18C9;
+
+  /* Primary — Emerald */
+  --color-primary: #10B981;
+  --color-primary-dark: #059669;
+  --color-primary-light: #34D399;
+
+  /* Accent — Deep Navy */
+  --color-accent: #1E3A5F;
+  --color-accent-light: #2D5A8E;
+
+  /* Status Colors */
+  --color-lost: #EF4444;
+  --color-lost-dark: #DC2626;
+  --color-found: #10B981;
+  --color-found-dark: #059669;
+  --color-claimed: #F59E0B;
+
+  /* Neutrals */
   --color-black: #0E0E0E;
   --color-white: #FFFFFF;
   --color-gray: #E0DDD9;
   --color-dark-gray: #7A7875;
+  --color-light-gray: #F7F5F3;
 
-  /* Typography */
-  --font-main: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  /* Gradients */
+  --gradient-primary: linear-gradient(135deg, #10B981 0%, #059669 100%);
+  --gradient-lost: linear-gradient(135deg, #EF4444 0%, #DC2626 50%, #B91C1C 100%);
+  --gradient-found: linear-gradient(135deg, #10B981 0%, #059669 50%, #047857 100%);
+  --gradient-accent: linear-gradient(135deg, #1E3A5F 0%, #2D5A8E 100%);
+  --gradient-dark: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+  --gradient-warm: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
+  --gradient-glass: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.05) 100%);
+
+  /* Glass */
+  --glass-bg: rgba(255, 255, 255, 0.75);
+  --glass-border: rgba(255, 255, 255, 0.3);
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+
+  --font-main: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
   --font-weight-heavy: 900;
   --font-weight-bold: 800;
   --font-weight-medium: 600;
@@ -28,14 +54,19 @@
   --radius-sm: 8px;
   --radius-pill: 9999px;
 
-  /* Base Setting Defaults */
+  /* Shadows */
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.12);
+  --shadow-xl: 0 24px 64px rgba(0, 0, 0, 0.16);
+
+  /* Base */
   font-family: var(--font-main);
   font-size: 16px;
   line-height: 1.5;
   color: var(--color-black);
   background-color: var(--bg-color);
-  
-  /* Remove scrollbar styling for cleaner look or make it minimal */
+
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -50,7 +81,8 @@
   padding: 0;
 }
 
-html, body {
+html,
+body {
   min-height: 100%;
 }
 
@@ -59,9 +91,12 @@ html, body {
   display: flex;
 }
 
-/* ── Typography Utilities ──────────────────────────────────────────────── */
+/* ── Typography ──────────────────────────────────────────────── */
 
-h1, h2, h3, h4 {
+h1,
+h2,
+h3,
+h4 {
   font-family: var(--font-main);
   font-weight: var(--font-weight-heavy);
   letter-spacing: -0.04em;
@@ -72,8 +107,8 @@ h1, h2, h3, h4 {
 /* ── Scrollbar ──────────────────────────────────────────────── */
 
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
@@ -81,15 +116,19 @@ h1, h2, h3, h4 {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--color-black);
+  background: rgba(14, 14, 14, 0.3);
   border-radius: var(--radius-pill);
+  transition: background 0.2s;
 }
 
-/* ── Components (Global) ──────────────────────────────────────────────── */
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(14, 14, 14, 0.6);
+}
 
-/* Thrawmaterials buttons are usually pill shaped and highly contrasting */
+/* ── Buttons ──────────────────────────────────────────────── */
+
 .btn-primary {
-  background-color: var(--color-orange);
+  background: var(--gradient-primary);
   color: var(--color-white);
   border: none;
   border-radius: var(--radius-pill);
@@ -99,13 +138,171 @@ h1, h2, h3, h4 {
   letter-spacing: -0.01em;
   text-transform: uppercase;
   cursor: pointer;
-  transition: transform 0.2s ease, opacity 0.2s ease;
+  transition: transform 0.2s ease, opacity 0.2s ease, box-shadow 0.2s ease;
 }
 
 .btn-primary:hover {
   transform: scale(1.02);
+  box-shadow: 0 8px 24px rgba(16, 185, 129, 0.3);
 }
 
 .btn-primary:active {
   transform: scale(0.98);
+}
+
+/* ── Badge Utilities ──────────────────────────────────────── */
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: var(--radius-pill);
+  font-size: 11px;
+  font-weight: var(--font-weight-bold);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.badge-lost {
+  background: var(--gradient-lost);
+  color: var(--color-white);
+}
+
+.badge-found {
+  background: var(--gradient-found);
+  color: var(--color-white);
+}
+
+.badge-open {
+  background: var(--gradient-accent);
+  color: var(--color-white);
+}
+
+.badge-claimed {
+  background: var(--gradient-warm);
+  color: var(--color-black);
+}
+
+.badge-closed {
+  background: var(--color-dark-gray);
+  color: var(--color-white);
+}
+
+/* ── Animations ──────────────────────────────────────────── */
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes pulse {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.6;
+  }
+}
+
+@keyframes float {
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes gradientShift {
+  0% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
+
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@keyframes blink {
+
+  0%,
+  80%,
+  100% {
+    opacity: 0.2;
+  }
+
+  40% {
+    opacity: 1;
+  }
+}
+
+/* ── Glass Card Utility ──────────────────────────────────── */
+
+.card-glass {
+  background: var(--glass-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
 }

@@ -2,7 +2,7 @@
   <div class="auth-container">
     <div class="auth-card bento-card">
       <div class="brand-header">
-        <h1>ITK <span class="brand-text">LostFound</span></h1>
+        <h1>ITK <span class="brand-text">Lost & Found</span></h1>
         <p>Login untuk mengakses sistem</p>
       </div>
 
@@ -112,7 +112,7 @@ async function handleRegister() {
 .auth-card {
   width: 100%;
   max-width: 400px;
-  background: var(--color-white);
+  background: var(--color-surface);
   padding: 40px;
   border-radius: 24px;
   box-shadow: 0 10px 30px rgba(0,0,0,0.05); /* slightly soften visually */
@@ -142,11 +142,11 @@ async function handleRegister() {
 .form-group label {
   font-size: 14px;
   font-weight: 600;
-  color: var(--color-black);
+  color: var(--color-text-main);
 }
 .form-group input {
   padding: 12px 16px;
-  border: 1px solid var(--color-gray);
+  border: 1px solid var(--color-border);
   border-radius: 12px;
   font-size: 14px;
   transition: border-color 0.2s;
@@ -163,7 +163,7 @@ async function handleRegister() {
   font-weight: bold;
   cursor: pointer;
   background: var(--gradient-primary);
-  color: var(--color-white);
+  color: var(--color-on-primary);
   font-size: 16px;
   margin-top: 10px;
   transition: opacity 0.2s;

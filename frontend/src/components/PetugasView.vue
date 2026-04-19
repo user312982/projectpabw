@@ -4,7 +4,7 @@
     <div class="mobile-header">
       <div class="mobile-brand">
         <span class="brand-itk">ITK</span>
-        <span class="brand-lf">LostFound</span>
+        <span class="brand-lf">Lost & Found</span>
       </div>
       <button class="hamburger" @click="mobileOpen = !mobileOpen" :class="{ open: mobileOpen }">
         <span></span><span></span><span></span>
@@ -253,7 +253,7 @@ onMounted(() => {
 .brand-itk {
   font-size: 20px;
   font-weight: 900;
-  color: var(--color-white);
+  color: var(--color-on-primary);
   letter-spacing: -0.04em;
 }
 
@@ -282,7 +282,7 @@ onMounted(() => {
   display: block;
   width: 22px;
   height: 2px;
-  background: var(--color-white);
+  background: var(--color-surface);
   border-radius: 2px;
   transition: all 0.3s ease;
 }
@@ -312,7 +312,7 @@ onMounted(() => {
 }
 
 .bento-card {
-  background: var(--color-white);
+  background: var(--color-surface);
   border-radius: var(--radius-lg);
   padding: 24px 16px;
   display: flex;
@@ -325,7 +325,7 @@ onMounted(() => {
 .brand-card {
   padding: 28px 16px;
   background: var(--gradient-dark);
-  color: var(--color-white);
+  color: var(--color-on-primary);
   position: relative;
   overflow: hidden;
 }
@@ -369,7 +369,7 @@ onMounted(() => {
   gap: 6px;
   padding: 14px 12px;
   border-radius: var(--radius-md);
-  color: var(--color-black);
+  color: var(--color-text-main);
   text-decoration: none;
   font-size: 11px;
   font-weight: var(--font-weight-bold);
@@ -398,7 +398,7 @@ onMounted(() => {
 
 .nav-item.active {
   background: var(--gradient-dark);
-  color: var(--color-white);
+  color: var(--color-on-primary);
   box-shadow: 0 4px 16px rgba(14,14,14,0.2);
 }
 
@@ -409,13 +409,13 @@ onMounted(() => {
 .footer-card {
   padding: 16px;
   background: transparent;
-  border: 1px solid var(--color-gray);
+  border: 1px solid var(--color-border);
 }
 
 .version-badge {
   font-size: 10px;
   font-weight: var(--font-weight-bold);
-  color: var(--color-dark-gray);
+  color: var(--color-text-muted);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -439,10 +439,10 @@ onMounted(() => {
   transition: background 0.5s ease;
 }
 
-.bg-primary { background: var(--gradient-primary); color: var(--color-white); }
-.bg-lost { background: var(--gradient-lost); color: var(--color-white); }
-.bg-found { background: var(--gradient-found); color: var(--color-white); }
-.bg-accent { background: var(--gradient-accent); color: var(--color-white); }
+.bg-primary { background: var(--gradient-primary); color: var(--color-on-primary); }
+.bg-lost { background: var(--gradient-lost); color: var(--color-on-primary); }
+.bg-found { background: var(--gradient-found); color: var(--color-on-primary); }
+.bg-accent { background: var(--gradient-accent); color: var(--color-on-primary); }
 
 .main-header {
   display: flex;
@@ -622,7 +622,7 @@ onMounted(() => {
 }
 
 .modal-content {
-  background: var(--color-white);
+  background: var(--color-surface);
   padding: 32px;
   border-radius: 20px;
   max-width: 400px;
@@ -640,7 +640,7 @@ onMounted(() => {
 .claim-form input {
   padding: 12px;
   border-radius: 8px;
-  border: 1px solid var(--color-gray);
+  border: 1px solid var(--color-border);
 }
 
 .claim-form .btn-primary {

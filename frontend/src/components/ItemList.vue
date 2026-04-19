@@ -138,7 +138,7 @@ const filteredItems = computed(() => {
   border: 2px solid rgba(255,255,255,0.3);
   border-radius: var(--radius-pill);
   background: rgba(255,255,255,0.1);
-  color: var(--color-white);
+  color: var(--color-on-primary);
   font-weight: var(--font-weight-bold);
   font-size: 13px;
   text-transform: uppercase;
@@ -155,9 +155,9 @@ const filteredItems = computed(() => {
 }
 
 .filter-btn.active {
-  background: var(--color-white);
-  color: var(--color-black);
-  border-color: var(--color-white);
+  background: var(--color-surface);
+  color: var(--color-text-main);
+  border-color: var(--color-on-primary);
 }
 
 .filter-count {
@@ -174,8 +174,8 @@ const filteredItems = computed(() => {
 }
 
 .filter-btn.active .filter-count {
-  background: var(--color-black);
-  color: var(--color-white);
+  background: var(--color-text-main);
+  color: var(--color-on-primary);
 }
 
 .filter-select {
@@ -183,7 +183,7 @@ const filteredItems = computed(() => {
   border: 2px solid rgba(255,255,255,0.3);
   border-radius: var(--radius-pill);
   background: rgba(255,255,255,0.1);
-  color: var(--color-white);
+  color: var(--color-on-primary);
   font-weight: var(--font-weight-bold);
   font-size: 13px;
   cursor: pointer;
@@ -193,8 +193,8 @@ const filteredItems = computed(() => {
 }
 
 .filter-select option {
-  background: var(--color-white);
-  color: var(--color-black);
+  background: var(--color-surface);
+  color: var(--color-text-main);
 }
 
 .search-box {
@@ -220,7 +220,7 @@ const filteredItems = computed(() => {
   background: rgba(255,255,255,0.1);
   font-size: 14px;
   font-weight: var(--font-weight-medium);
-  color: var(--color-white);
+  color: var(--color-on-primary);
   outline: none;
   transition: all 0.25s ease;
   backdrop-filter: blur(4px);
@@ -265,7 +265,7 @@ const filteredItems = computed(() => {
   font-size: 28px;
   letter-spacing: -0.02em;
   margin: 0 0 8px 0;
-  color: var(--color-white);
+  color: var(--color-on-primary);
   opacity: 0.9;
 }
 
@@ -273,7 +273,7 @@ const filteredItems = computed(() => {
   font-size: 16px;
   font-weight: var(--font-weight-medium);
   opacity: 0.7;
-  color: var(--color-white);
+  color: var(--color-on-primary);
 }
 
 @media (max-width: 768px) {

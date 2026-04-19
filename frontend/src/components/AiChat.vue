@@ -5,7 +5,7 @@
         <div class="ai-badge">AI</div>
         <div>
           <h3>Assistant</h3>
-          <p>ITK LostFound</p>
+          <p>ITK Lost & Found</p>
         </div>
       </div>
       <div class="status-dot"></div>
@@ -143,10 +143,10 @@ defineExpose({ sendMessageExt });
   height: 100%;
   min-height: 500px;
   width: 100%;
-  background: var(--color-white);
+  background: var(--color-surface);
   border-radius: var(--radius-lg);
   overflow: hidden;
-  color: var(--color-black);
+  color: var(--color-text-main);
   box-shadow: var(--shadow-md);
 }
 
@@ -155,7 +155,7 @@ defineExpose({ sendMessageExt });
   align-items: center;
   padding: 20px 24px;
   background: var(--gradient-dark);
-  color: var(--color-white);
+  color: var(--color-on-primary);
 }
 
 .header-title {
@@ -250,7 +250,7 @@ defineExpose({ sendMessageExt });
 .empty-desc {
   font-size: 14px;
   font-weight: var(--font-weight-medium);
-  color: var(--color-dark-gray);
+  color: var(--color-text-muted);
   margin-bottom: 24px;
 }
 
@@ -265,10 +265,10 @@ defineExpose({ sendMessageExt });
   justify-content: space-between;
   align-items: center;
   padding: 14px 16px;
-  background: var(--color-white);
-  border: 1.5px solid var(--color-gray);
+  background: var(--color-surface);
+  border: 1.5px solid var(--color-border);
   border-radius: var(--radius-md);
-  color: var(--color-black);
+  color: var(--color-text-main);
   font-weight: var(--font-weight-bold);
   font-size: 13px;
   text-align: left;
@@ -277,9 +277,9 @@ defineExpose({ sendMessageExt });
 }
 
 .suggestion-btn:hover {
-  background: var(--color-black);
-  color: var(--color-white);
-  border-color: var(--color-black);
+  background: var(--color-text-main);
+  color: var(--color-on-primary);
+  border-color: var(--color-text-main);
   transform: translateX(4px);
 }
 
@@ -309,7 +309,7 @@ defineExpose({ sendMessageExt });
   align-items: center;
   justify-content: center;
   background: var(--gradient-dark);
-  color: var(--color-white);
+  color: var(--color-on-primary);
   border-radius: 10px;
   align-self: flex-end;
   margin-bottom: 4px;
@@ -341,14 +341,14 @@ defineExpose({ sendMessageExt });
 
 .chat-msg.user .msg-text {
   background: var(--gradient-dark);
-  color: var(--color-white);
+  color: var(--color-on-primary);
   border-bottom-right-radius: 4px;
 }
 
 .chat-msg.ai .msg-text {
-  background: var(--color-white);
-  color: var(--color-black);
-  border: 1.5px solid var(--color-gray);
+  background: var(--color-surface);
+  color: var(--color-text-main);
+  border: 1.5px solid var(--color-border);
   border-top-left-radius: 4px;
   box-shadow: var(--shadow-sm);
 }
@@ -356,7 +356,7 @@ defineExpose({ sendMessageExt });
 .msg-time {
   font-size: 10px;
   font-weight: var(--font-weight-bold);
-  color: var(--color-dark-gray);
+  color: var(--color-text-muted);
 }
 
 /* Typing Indicator */
@@ -364,8 +364,8 @@ defineExpose({ sendMessageExt });
   display: flex;
   gap: 5px;
   padding: 18px;
-  background: var(--color-white);
-  border: 1.5px solid var(--color-gray);
+  background: var(--color-surface);
+  border: 1.5px solid var(--color-border);
   border-radius: var(--radius-md);
   border-top-left-radius: 4px;
 }
@@ -374,7 +374,7 @@ defineExpose({ sendMessageExt });
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: var(--color-dark-gray);
+  background: var(--color-text-muted);
   animation: blink 1.4s infinite both;
 }
 .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
@@ -385,8 +385,8 @@ defineExpose({ sendMessageExt });
   position: relative;
   display: flex;
   padding: 20px;
-  border-top: 1.5px solid var(--color-gray);
-  background: var(--color-white);
+  border-top: 1.5px solid var(--color-border);
+  background: var(--color-surface);
   align-items: center;
 }
 
@@ -394,10 +394,10 @@ defineExpose({ sendMessageExt });
   width: 100%;
   box-sizing: border-box;
   padding: 14px 60px 14px 20px;
-  border: 1.5px solid var(--color-gray);
+  border: 1.5px solid var(--color-border);
   border-radius: var(--radius-pill);
-  background: var(--color-light-gray);
-  color: var(--color-black);
+  background: var(--color-white); /* Changed to pure white */
+  color: var(--color-text-main);
   font-size: 15px;
   font-weight: var(--font-weight-medium);
   outline: none;
@@ -405,13 +405,13 @@ defineExpose({ sendMessageExt });
 }
 
 .chat-input::placeholder {
-  color: var(--color-dark-gray);
+  color: var(--color-text-muted);
   font-weight: var(--font-weight-medium);
 }
 
 .chat-input:focus {
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(16,185,129,0.08);
+  box-shadow: 0 0 0 3px rgba(121, 174, 111, 0.15); /* Updated to match Sage theme */
 }
 
 .chat-send-btn {
@@ -422,7 +422,7 @@ defineExpose({ sendMessageExt });
   border: none;
   border-radius: 50%;
   background: var(--gradient-primary);
-  color: var(--color-white);
+  color: var(--color-on-primary);
   display: flex;
   align-items: center;
   justify-content: center;

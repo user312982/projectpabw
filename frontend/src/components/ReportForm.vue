@@ -208,7 +208,7 @@ async function submitForm() {
 
 <style scoped>
 .report-form-wrapper {
-  background: var(--color-white);
+  background: var(--color-surface);
   border-radius: var(--radius-lg);
   padding: 36px;
   animation: scaleIn 0.4s ease;
@@ -238,7 +238,7 @@ async function submitForm() {
   height: 52px;
   border-radius: 16px;
   background: var(--gradient-accent);
-  color: var(--color-white);
+  color: var(--color-on-primary);
   margin-bottom: 16px;
 }
 
@@ -248,12 +248,12 @@ async function submitForm() {
   text-transform: uppercase;
   letter-spacing: -0.02em;
   margin: 0;
-  color: var(--color-black);
+  color: var(--color-text-main);
 }
 
 .form-header p {
   font-size: 14px;
-  color: var(--color-dark-gray);
+  color: var(--color-text-muted);
   margin-top: 8px;
   font-weight: var(--font-weight-medium);
 }
@@ -285,16 +285,16 @@ async function submitForm() {
   font-weight: var(--font-weight-bold);
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--color-dark-gray);
+  color: var(--color-text-muted);
 }
 
 .form-input {
   padding: 14px 18px;
-  border: 2px solid var(--color-gray);
+  border: 2px solid var(--color-border);
   border-radius: var(--radius-md);
   font-size: 15px;
   font-weight: var(--font-weight-medium);
-  color: var(--color-black);
+  color: var(--color-text-main);
   background: var(--color-light-gray);
   outline: none;
   transition: border-color 0.25s, box-shadow 0.25s, background 0.25s;
@@ -304,7 +304,7 @@ async function submitForm() {
 .form-input:focus {
   border-color: var(--color-primary);
   box-shadow: 0 0 0 4px rgba(16,185,129,0.1);
-  background: var(--color-white);
+  background: var(--color-surface);
 }
 
 .form-textarea {
@@ -320,14 +320,14 @@ async function submitForm() {
 .type-btn {
   flex: 1;
   padding: 14px;
-  border: 2px solid var(--color-gray);
+  border: 2px solid var(--color-border);
   border-radius: var(--radius-md);
   background: var(--color-light-gray);
   font-weight: var(--font-weight-bold);
   font-size: 14px;
   cursor: pointer;
   transition: all 0.25s;
-  color: var(--color-dark-gray);
+  color: var(--color-text-muted);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -335,20 +335,20 @@ async function submitForm() {
 }
 
 .type-btn:hover {
-  border-color: var(--color-black);
-  color: var(--color-black);
+  border-color: var(--color-text-main);
+  color: var(--color-text-main);
 }
 
 .type-btn.active.lost {
   background: var(--gradient-lost);
-  color: var(--color-white);
+  color: var(--color-on-primary);
   border-color: transparent;
   box-shadow: 0 4px 16px rgba(239,68,68,0.25);
 }
 
 .type-btn.active.found {
   background: var(--gradient-found);
-  color: var(--color-white);
+  color: var(--color-on-primary);
   border-color: transparent;
   box-shadow: 0 4px 16px rgba(16,185,129,0.25);
 }
@@ -358,7 +358,7 @@ async function submitForm() {
   border: none;
   border-radius: var(--radius-pill);
   background: var(--gradient-dark);
-  color: var(--color-white);
+  color: var(--color-on-primary);
   font-weight: var(--font-weight-bold);
   font-size: 15px;
   text-transform: uppercase;
@@ -389,7 +389,7 @@ async function submitForm() {
   width: 16px;
   height: 16px;
   border: 2px solid rgba(255,255,255,0.3);
-  border-top-color: var(--color-white);
+  border-top-color: var(--color-on-primary);
   border-radius: 50%;
   animation: spin 0.6s linear infinite;
 }

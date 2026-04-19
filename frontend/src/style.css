@@ -1,70 +1,69 @@
-/* ── Design Tokens (ITK LostFound) ─────────────────────────────── */
+/* ── Matcha / Sage Minimalist Palette ─────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
 
 :root {
-  /* Background */
-  --bg-color: #F2EEEA;
+  /* Core Backgrounds */
+  --bg-color: #F2EDC2;          /* Cream */
+  --color-surface: #FBFAF2;     /* Slightly lighter cream/white for cards */
+  --color-surface-hover: #9FCB98; /* Light Green for hover effects */
+  
+  /* Text Accents */
+  --color-text-main: #346739;   /* Dark Green (High Contrast against Cream) */
+  --color-text-muted: #79AE6F;  /* Medium Green */
 
-  /* Primary — Emerald */
-  --color-primary: #10B981;
-  --color-primary-dark: #059669;
-  --color-primary-light: #34D399;
+  /* Borders / Separators */
+  --color-border: #9FCB98;      /* Light Green */
 
-  /* Accent — Deep Navy */
-  --color-accent: #1E3A5F;
-  --color-accent-light: #2D5A8E;
+  /* Primary Accent - Light Green (for strong buttons) */
+  --color-primary: #9FCB98;     /* Light Green */
+  --color-primary-dark: #79AE6F; 
+  --color-on-primary: #346739;  /* Dark Green text on Light Green button */
 
   /* Status Colors */
-  --color-lost: #EF4444;
-  --color-lost-dark: #DC2626;
-  --color-found: #10B981;
-  --color-found-dark: #059669;
-  --color-claimed: #F59E0B;
+  --color-lost: #346739;        
+  --color-found: #346739;       
+  --color-claimed: #346739;     
 
-  /* Neutrals */
-  --color-black: #0E0E0E;
+  /* Raw Neutral Fallbacks */
   --color-white: #FFFFFF;
-  --color-gray: #E0DDD9;
-  --color-dark-gray: #7A7875;
-  --color-light-gray: #F7F5F3;
+  --color-black: #000000;
+  --color-gray: var(--color-border);
+  --color-dark-gray: var(--color-text-muted);
+  --color-light-gray: var(--color-surface-hover);
 
-  /* Gradients */
-  --gradient-primary: linear-gradient(135deg, #10B981 0%, #059669 100%);
-  --gradient-lost: linear-gradient(135deg, #EF4444 0%, #DC2626 50%, #B91C1C 100%);
-  --gradient-found: linear-gradient(135deg, #10B981 0%, #059669 50%, #047857 100%);
-  --gradient-accent: linear-gradient(135deg, #1E3A5F 0%, #2D5A8E 100%);
-  --gradient-dark: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
-  --gradient-warm: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
-  --gradient-glass: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.05) 100%);
+  /* Gradients (Removed for Flat Design) */
+  --gradient-primary: var(--color-primary);
+  --gradient-lost: rgba(52, 103, 57, 0.1);
+  --gradient-found: rgba(52, 103, 57, 0.1);
+  --gradient-accent: var(--color-surface-hover);
+  --gradient-dark: var(--color-surface);
+  --gradient-warm: rgba(121, 174, 111, 0.1);
+  --gradient-glass: transparent;
 
-  /* Glass */
-  --glass-bg: rgba(255, 255, 255, 0.75);
-  --glass-border: rgba(255, 255, 255, 0.3);
-  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
-
-  --font-main: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-  --font-weight-heavy: 900;
-  --font-weight-bold: 800;
-  --font-weight-medium: 600;
+  /* Typography */
+  --font-main: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-weight-heavy: 600;
+  --font-weight-bold: 500;
+  --font-weight-medium: 500;
   --font-weight-normal: 400;
 
-  /* Spacing & Radii */
-  --radius-xl: 40px;
-  --radius-lg: 24px;
-  --radius-md: 16px;
-  --radius-sm: 8px;
+  /* Subtle Radii */
+  --radius-xl: 12px;
+  --radius-lg: 8px;
+  --radius-md: 6px;
+  --radius-sm: 4px;
   --radius-pill: 9999px;
 
-  /* Shadows */
-  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.04);
-  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.08);
-  --shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.12);
-  --shadow-xl: 0 24px 64px rgba(0, 0, 0, 0.16);
+  /* Shadows - Minimalist Drops (Since Cream has low depth naturally, 
+     slightly soft shadow helps elevate cards, but keeping mostly flat) */
+  --shadow-sm: 0 1px 2px rgba(52, 103, 57, 0.05);
+  --shadow-md: 0 4px 6px rgba(52, 103, 57, 0.08);
+  --shadow-lg: 0 10px 15px rgba(52, 103, 57, 0.1);
 
-  /* Base */
   font-family: var(--font-main);
-  font-size: 16px;
-  line-height: 1.5;
-  color: var(--color-black);
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--color-text-main);
   background-color: var(--bg-color);
 
   -webkit-font-smoothing: antialiased;
@@ -93,15 +92,12 @@ body {
 
 /* ── Typography ──────────────────────────────────────────────── */
 
-h1,
-h2,
-h3,
-h4 {
+h1,h2,h3,h4 {
   font-family: var(--font-main);
   font-weight: var(--font-weight-heavy);
-  letter-spacing: -0.04em;
-  line-height: 0.95;
-  color: inherit;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+  color: var(--color-text-main);
 }
 
 /* ── Scrollbar ──────────────────────────────────────────────── */
@@ -110,44 +106,55 @@ h4 {
   width: 6px;
   height: 6px;
 }
-
 ::-webkit-scrollbar-track {
   background: transparent;
 }
-
 ::-webkit-scrollbar-thumb {
-  background: rgba(14, 14, 14, 0.3);
+  background: var(--color-text-muted);
   border-radius: var(--radius-pill);
-  transition: background 0.2s;
 }
-
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(14, 14, 14, 0.6);
+  background: var(--color-primary);
 }
 
 /* ── Buttons ──────────────────────────────────────────────── */
 
 .btn-primary {
-  background: var(--gradient-primary);
-  color: var(--color-white);
-  border: none;
-  border-radius: var(--radius-pill);
-  padding: 12px 24px;
-  font-weight: var(--font-weight-bold);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  padding: 10px 20px;
+  font-weight: var(--font-weight-medium);
   font-size: 14px;
-  letter-spacing: -0.01em;
-  text-transform: uppercase;
   cursor: pointer;
-  transition: transform 0.2s ease, opacity 0.2s ease, box-shadow 0.2s ease;
+  transition: all 0.2s ease;
+  box-shadow: var(--shadow-sm);
 }
 
 .btn-primary:hover {
-  transform: scale(1.02);
-  box-shadow: 0 8px 24px rgba(16, 185, 129, 0.3);
+  background: var(--color-primary-dark);
 }
 
 .btn-primary:active {
-  transform: scale(0.98);
+  transform: translateY(1px);
+}
+
+.btn-outline {
+  background: transparent;
+  color: var(--color-text-main);
+  border: 2px solid var(--color-primary);
+  border-radius: var(--radius-sm);
+  padding: 8px 18px; /* Adjusted padding to account for 2px border */
+  font-weight: var(--font-weight-heavy);
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-outline:hover {
+  background: var(--color-text-main);
+  color: var(--color-on-primary);
 }
 
 /* ── Badge Utilities ──────────────────────────────────────── */
@@ -155,154 +162,56 @@ h4 {
 .badge {
   display: inline-flex;
   align-items: center;
-  padding: 4px 12px;
-  border-radius: var(--radius-pill);
-  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
   font-weight: var(--font-weight-bold);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  border: 1px solid transparent;
 }
 
 .badge-lost {
-  background: var(--gradient-lost);
-  color: var(--color-white);
+  background: rgba(159, 203, 152, 0.3);
+  color: var(--color-lost);
+  border-color: rgba(121, 174, 111, 0.4);
 }
 
 .badge-found {
-  background: var(--gradient-found);
-  color: var(--color-white);
+  background: rgba(159, 203, 152, 0.3);
+  color: var(--color-found);
+  border-color: rgba(121, 174, 111, 0.4);
 }
 
 .badge-open {
-  background: var(--gradient-accent);
-  color: var(--color-white);
+  background: var(--color-surface-hover);
+  color: var(--color-text-main);
+  border-color: var(--color-border);
 }
 
 .badge-claimed {
-  background: var(--gradient-warm);
-  color: var(--color-black);
+  background: rgba(159, 203, 152, 0.3);
+  color: var(--color-claimed);
+  border-color: rgba(121, 174, 111, 0.4);
 }
 
 .badge-closed {
-  background: var(--color-dark-gray);
-  color: var(--color-white);
+  background: transparent;
+  color: var(--color-text-muted);
+  border-color: var(--color-border);
 }
 
-/* ── Animations ──────────────────────────────────────────── */
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes slideIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes scaleIn {
-  from {
-    opacity: 0;
-    transform: scale(0.95);
-  }
-
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-@keyframes shimmer {
-  0% {
-    background-position: -200% 0;
-  }
-
-  100% {
-    background-position: 200% 0;
-  }
-}
-
-@keyframes pulse {
-
-  0%,
-  100% {
-    opacity: 1;
-  }
-
-  50% {
-    opacity: 0.6;
-  }
-}
-
-@keyframes float {
-
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-
-  50% {
-    transform: translateY(-6px);
-  }
-}
-
-@keyframes gradientShift {
-  0% {
-    background-position: 0% 50%;
-  }
-
-  50% {
-    background-position: 100% 50%;
-  }
-
-  100% {
-    background-position: 0% 50%;
-  }
-}
-
-@keyframes blink {
-
-  0%,
-  80%,
-  100% {
-    opacity: 0.2;
-  }
-
-  40% {
-    opacity: 1;
-  }
-}
-
-/* ── Glass Card Utility ──────────────────────────────────── */
+/* ── Component Primitives ──────────────────────────────────── */
 
 .card-glass {
-  background: var(--glass-bg);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid var(--glass-border);
-  box-shadow: var(--glass-shadow);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Add custom class for elements that were originally black text / dark */
+.bento-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-md);
 }

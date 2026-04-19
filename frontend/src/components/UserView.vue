@@ -13,7 +13,7 @@
     <!-- Initial Search Engine View -->
     <div class="search-engine-view" v-if="!hasSearched">
       <div class="brand">
-        <h1>ITK <span class="brand-text">LostFound</span></h1>
+        <h1>ITK <span class="brand-text">Lost & Found</span></h1>
         <p>Asisten AI Pencarian Barang Hilang & Ditemukan</p>
       </div>
       
@@ -137,7 +137,7 @@ onMounted(() => {
   overflow: hidden;
   position: relative;
   background: var(--bg-color); /* inherits gradient or dark bg */
-  color: var(--color-white);
+  color: var(--color-text-main);
   display: flex;
   flex-direction: column;
 }
@@ -155,15 +155,15 @@ onMounted(() => {
   gap: 8px;
   padding: 10px 16px;
   border-radius: 20px;
-  border: 1px solid rgba(255,255,255,0.2);
-  background: rgba(255,255,255,0.05);
-  color: white;
+  border: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-text-main);
   cursor: pointer;
   transition: 0.3s;
   z-index: 10;
   backdrop-filter: blur(5px);
 }
-.guide-btn:hover { background: rgba(255,255,255,0.15); border-color: rgba(255,255,255,0.4); }
+.guide-btn:hover { background: var(--color-light-gray); border-color: var(--color-text-muted); }
 
 .logout-btn {
   position: absolute;
@@ -174,15 +174,15 @@ onMounted(() => {
   gap: 8px;
   padding: 10px 16px;
   border-radius: 20px;
-  border: 1px solid rgba(255,255,255,0.2);
+  border: 1px solid var(--color-border);
   background: transparent;
-  color: white;
+  color: var(--color-text-main);
   cursor: pointer;
   transition: 0.3s;
   z-index: 10;
   backdrop-filter: blur(5px);
 }
-.logout-btn:hover { background: rgba(255,255,255,0.15); border-color: rgba(255,255,255,0.4); }
+.logout-btn:hover { background: var(--color-light-gray); border-color: var(--color-text-muted); }
 
 /* Search Engine View */
 .search-engine-view {
@@ -202,7 +202,6 @@ onMounted(() => {
   font-size: 72px;
   margin: 0;
   letter-spacing: -3px;
-  text-shadow: 0 4px 20px rgba(16,185,129,0.3);
 }
 .brand-text { color: var(--color-primary); }
 .brand p { opacity: 0.8; font-size: 18px; margin-top: 15px; font-weight: 500;}
@@ -227,7 +226,7 @@ onMounted(() => {
   left: 24px;
   top: 50%;
   transform: translateY(-50%);
-  color: rgba(255,255,255,0.6);
+  color: var(--color-text-muted);
 }
 .search-input {
   width: 100%;
@@ -235,16 +234,16 @@ onMounted(() => {
   font-size: 18px;
   border-radius: 40px;
   border: 1.5px solid rgba(255,255,255,0.2);
-  background: rgba(14,14,14,0.6);
-  color: white;
+  background: var(--color-surface); border: 1px solid var(--color-border);
+  color: var(--color-text-main);
   outline: none;
   font-family: inherit;
   box-shadow: 0 10px 40px rgba(0,0,0,0.2);
   backdrop-filter: blur(10px);
   transition: all 0.3s;
 }
-.search-input:focus { border-color: var(--color-primary); background: rgba(14,14,14,0.8); box-shadow: 0 10px 40px rgba(16,185,129,0.15);}
-.search-input::placeholder { color: rgba(255,255,255,0.4); }
+.search-input:focus { border-color: var(--color-primary); background: var(--color-surface); }
+.search-input::placeholder { color: var(--color-text-muted); }
 
 .search-actions {
   display: flex;
@@ -260,11 +259,11 @@ onMounted(() => {
   border: none;
   transition: all 0.2s;
 }
-.btn-primary { background: var(--gradient-primary); color: white; box-shadow: 0 4px 15px rgba(16,185,129,0.4);}
+.btn-primary { background: var(--gradient-primary); color: var(--color-on-primary); }
 .btn-primary:active { transform: scale(0.95); }
-.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none;}
-.btn-outline { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.2); color: white; backdrop-filter: blur(5px);}
-.btn-outline:hover { background: rgba(255,255,255,0.15); border-color: rgba(255,255,255,0.5);}
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-outline { background: transparent; border: 1px solid var(--color-border); color: var(--color-text-main); backdrop-filter: blur(5px);}
+.btn-outline:hover { background: var(--color-light-gray); border-color: var(--color-text-muted);}
 
 /* Active Chat View */
 .active-chat-view {
@@ -276,18 +275,18 @@ onMounted(() => {
 }
 .content-left {
   flex: 1;
-  background: rgba(14,14,14,0.5);
+  background: var(--color-surface);
   backdrop-filter: blur(12px);
   border-radius: 24px;
   padding: 24px 32px;
   overflow-y: auto;
-  border: 1px solid rgba(255,255,255,0.08);
+  border: 1px solid var(--color-border);
   animation: slideIn 0.5s ease;
 }
 .content-header {
   margin-bottom: 24px;
   padding-bottom: 20px;
-  border-bottom: 1px solid rgba(255,255,255,0.1);
+  border-bottom: 1px solid var(--color-border);
 }
 .content-header h2 {
   margin: 0 0 8px 0;
@@ -321,8 +320,8 @@ onMounted(() => {
   padding: 20px;
 }
 .modal-content {
-  background: var(--color-white);
-  color: var(--color-black);
+  background: var(--color-surface);
+  color: var(--color-text-main);
   padding: 40px;
   border-radius: 24px;
   max-width: 500px;
@@ -334,8 +333,8 @@ onMounted(() => {
 .modal-content p { opacity: 0.8; line-height: 1.5; }
 .guide-list { margin: 24px 0; padding-left: 20px; line-height: 1.8; opacity: 0.9;}
 .guide-list li { margin-bottom: 8px; }
-.btn-black { background: var(--color-black); color: white; width: 100%; border-radius: 12px; padding: 14px;}
-.btn-black:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(0,0,0,0.15);}
+.btn-black { background: var(--color-text-main); color: var(--bg-color); width: 100%; border-radius: 12px; padding: 14px; font-weight: bold; border: none; cursor: pointer; transition: all 0.2s; }
+.btn-black:hover { transform: translateY(-2px); opacity: 0.9; }
 
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes slideIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }

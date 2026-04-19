@@ -93,7 +93,7 @@ const relativeTime = computed(() => {
 
 <style scoped>
 .item-card {
-  background: var(--color-white);
+  background: var(--color-surface);
   border-radius: var(--radius-lg);
   padding: 24px;
   display: flex;
@@ -114,7 +114,7 @@ const relativeTime = computed(() => {
   left: 0;
   right: 0;
   height: 3px;
-  background: var(--color-gray);
+  background: var(--color-border);
   transition: background 0.3s;
 }
 
@@ -143,12 +143,12 @@ const relativeTime = computed(() => {
 }
 
 .dot-lost {
-  background: var(--color-white);
+  background: var(--color-surface);
   animation: pulse 2s infinite;
 }
 
 .dot-found {
-  background: var(--color-white);
+  background: var(--color-surface);
 }
 
 .card-title {
@@ -156,7 +156,7 @@ const relativeTime = computed(() => {
   font-weight: var(--font-weight-heavy);
   letter-spacing: -0.02em;
   line-height: 1.15;
-  color: var(--color-black);
+  color: var(--color-text-main);
 }
 
 .card-meta {
@@ -175,18 +175,18 @@ const relativeTime = computed(() => {
 .meta-icon {
   display: flex;
   align-items: center;
-  color: var(--color-dark-gray);
+  color: var(--color-text-muted);
   flex-shrink: 0;
 }
 
 .meta-value {
   font-weight: var(--font-weight-medium);
-  color: var(--color-black);
+  color: var(--color-text-main);
 }
 
 .card-desc {
   font-size: 14px;
-  color: var(--color-dark-gray);
+  color: var(--color-text-muted);
   line-height: 1.5;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -199,13 +199,13 @@ const relativeTime = computed(() => {
   justify-content: space-between;
   align-items: center;
   padding-top: 12px;
-  border-top: 1px solid var(--color-gray);
+  border-top: 1px solid var(--color-border);
 }
 
 .card-date {
   font-size: 11px;
   font-weight: var(--font-weight-bold);
-  color: var(--color-dark-gray);
+  color: var(--color-text-muted);
   text-transform: uppercase;
   letter-spacing: 0.03em;
 }

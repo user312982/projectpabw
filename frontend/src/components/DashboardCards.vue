@@ -97,10 +97,10 @@ const cards = computed(() => [
   box-shadow: var(--shadow-lg);
 }
 
-.bg-lost { background: var(--gradient-lost); color: var(--color-white); }
-.bg-found { background: var(--gradient-found); color: var(--color-white); }
-.bg-accent { background: var(--gradient-accent); color: var(--color-white); }
-.bg-gray-card { background: linear-gradient(135deg, #E8E5E1 0%, #D4D0CC 100%); color: var(--color-black); }
+.bg-lost { background: var(--gradient-lost); color: var(--color-on-primary); }
+.bg-found { background: var(--gradient-found); color: var(--color-on-primary); }
+.bg-accent { background: var(--gradient-accent); color: var(--color-on-primary); }
+.bg-gray-card { background: linear-gradient(135deg, #E8E5E1 0%, #D4D0CC 100%); color: var(--color-text-main); }
 
 .card-top {
   display: flex;

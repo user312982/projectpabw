@@ -78,12 +78,12 @@
 
             <!-- Lost Page -->
             <template v-if="currentPage === 'lost'">
-              <ItemList :items="lostItems" />
+              <ItemList :items="lostItems" :hideTypeFilter="true" />
             </template>
 
             <!-- Found Page -->
             <template v-if="currentPage === 'found'">
-              <ItemList :items="foundItems" />
+              <ItemList :items="foundItems" :hideTypeFilter="true" />
             </template>
 
             <!-- Report Page -->

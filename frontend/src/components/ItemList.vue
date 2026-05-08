@@ -2,7 +2,7 @@
   <div class="item-list-wrapper">
     <!-- Filter Bar -->
     <div class="filter-bar">
-      <div class="filter-group">
+      <div class="filter-group" v-if="!hideTypeFilter">
         <button
           v-for="t in typeFilters"
           :key="t.value"
@@ -67,6 +67,10 @@ const props = defineProps({
   items: {
     type: Array,
     default: () => [],
+  },
+    hideTypeFilter: {      
+    type: Boolean,
+    default: false,
   },
 })
 

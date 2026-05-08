@@ -73,17 +73,17 @@
             <!-- Dashboard Page -->
             <template v-if="currentPage === 'dashboard'">
               <DashboardCards :data="dashboardData" />
-              <ItemList :items="allItems" />
+              <ItemList :items="allItems" :user="user" @code-copied="code => $emit('code-copied', code)" @updated="refreshAllData" />
             </template>
 
             <!-- Lost Page -->
             <template v-if="currentPage === 'lost'">
-              <ItemList :items="lostItems" />
+              <ItemList :items="lostItems" :user="user" @updated="refreshAllData" />
             </template>
 
             <!-- Found Page -->
             <template v-if="currentPage === 'found'">
-              <ItemList :items="foundItems" />
+              <ItemList :items="foundItems" :user="user" @updated="refreshAllData" />
             </template>
 
             <!-- Report Page -->
@@ -128,6 +128,13 @@ import AiChat from './AiChat.vue'
 import DashboardCards from './DashboardCards.vue'
 import ItemList from './ItemList.vue'
 import ReportForm from './ReportForm.vue'
+
+const props = defineProps({
+  user: {
+    type: Object,
+    required: true,
+  },
+})
 
 const currentPage = ref('dashboard')
 const mobileOpen = ref(false)

@@ -94,13 +94,12 @@
       <!-- Reporter Info -->
       <div class="form-row">
         <div class="form-group">
-          <label class="form-label">Nama Pelapor *</label>
+          <label class="form-label">Nama Pelapor</label>
           <input
             v-model="form.reporter_name"
             type="text"
-            placeholder="Nama lengkap"
+            placeholder="Nama lengkap (opsional)"
             class="form-input"
-            required
           />
         </div>
         <div class="form-group">
@@ -118,7 +117,7 @@
       <button
         type="submit"
         class="submit-btn"
-        :disabled="submitting || !form.title || !form.reporter_name"
+        :disabled="submitting || !form.title"
       >
         <span v-if="!submitting">Kirim Laporan</span>
         <span v-else class="btn-loading">
@@ -169,7 +168,7 @@ const statusMessage = ref('')
 const statusType = ref('')
 
 async function submitForm() {
-  if (!form.title || !form.reporter_name) return
+  if (!form.title) return
 
   submitting.value = true
   statusMessage.value = ''
@@ -178,6 +177,7 @@ async function submitForm() {
     await api.post('/api/items', {
       ...form,
       date_event: form.date_event || null,
+      reporter_name: form.reporter_name || null,
     })
 
     statusMessage.value = 'Laporan berhasil dikirim!'

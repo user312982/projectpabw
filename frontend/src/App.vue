@@ -23,14 +23,14 @@ onMounted(async () => {
   const token = localStorage.getItem('token')
   if (token) {
     try {
-      // Validate token internally or just use the cached user and rely on interceptor logic. 
-      // Better to check with backend just in case.
       const res = await api.get('/api/auth/me')
       user.value = res.data
       localStorage.setItem('user', JSON.stringify(res.data))
     } catch(e) {
-      console.error(e)
-      handleLogout()
+      if (e.code !== 'ERR_CANCELED' && e.code !== 'ECONNABORTED') {
+        console.error(e)
+        handleLogout()
+      }
     }
   }
 })
@@ -41,6 +41,7 @@ function handleAuthSuccess(userData) {
 
 function handleLogout() {
   localStorage.removeItem('token')
+  localStorage.removeItem('refresh_token')
   localStorage.removeItem('user')
   user.value = null
 }

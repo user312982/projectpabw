@@ -1,28 +1,8 @@
 <template>
   <div class="item-list-wrapper">
-    <!-- Filter Bar -->
+    <!-- Search Bar Only -->
     <div class="filter-bar">
-      <div class="filter-group">
-        <button
-          v-for="t in typeFilters"
-          :key="t.value"
-          class="filter-btn"
-          :class="{ active: activeType === t.value }"
-          @click="activeType = t.value"
-        >
-          {{ t.label }}
-          <span class="filter-count" v-if="t.count > 0">{{ t.count }}</span>
-        </button>
-      </div>
-
-      <div class="filter-group">
-        <select v-model="activeCategory" class="filter-select">
-          <option value="">Semua Kategori</option>
-          <option v-for="c in categories" :key="c" :value="c">{{ capitalize(c) }}</option>
-        </select>
-      </div>
-
-      <div class="search-box">
+      <div class="search-box" style="flex: 1; max-width: 400px;">
         <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         <input
           v-model="searchQuery"
@@ -39,7 +19,11 @@
         v-for="(item, idx) in filteredItems"
         :key="item.id"
         :item="item"
+        :user="user"
         :style="{ animationDelay: idx * 0.05 + 's' }"
+        @click="$emit('click-item', item)"
+        @code-copied="code => $emit('code-copied', code)"
+        @updated="id => $emit('updated', id)"
       />
     </div>
 
@@ -54,7 +38,7 @@
         </svg>
       </div>
       <h3 class="empty-title">Tidak Ada Data</h3>
-      <p>Belum ada laporan barang{{ activeType ? (activeType === 'lost' ? ' hilang' : ' ditemukan') : '' }}.</p>
+      <p>Belum ada laporan barang.</p>
     </div>
   </div>
 </template>
@@ -68,35 +52,19 @@ const props = defineProps({
     type: Array,
     default: () => [],
   },
+  user: {
+    type: Object,
+    default: null,
+  },
 })
 
-const activeType = ref('')
-const activeCategory = ref('')
+const emit = defineEmits(['code-copied', 'updated', 'click-item'])
+
 const searchQuery = ref('')
-
-const typeFilters = computed(() => [
-  { label: 'Semua', value: '', count: props.items.length },
-  { label: 'Hilang', value: 'lost', count: props.items.filter(i => i.type === 'lost').length },
-  { label: 'Ditemukan', value: 'found', count: props.items.filter(i => i.type === 'found').length },
-])
-
-const categories = [
-  'elektronik', 'pakaian', 'dokumen', 'aksesoris', 'tas', 'kunci', 'lainnya'
-]
-
-function capitalize(str) {
-  return str.charAt(0).toUpperCase() + str.slice(1)
-}
 
 const filteredItems = computed(() => {
   let result = props.items
 
-  if (activeType.value) {
-    result = result.filter(item => item.type === activeType.value)
-  }
-  if (activeCategory.value) {
-    result = result.filter(item => item.category === activeCategory.value)
-  }
   if (searchQuery.value.trim()) {
     const q = searchQuery.value.toLowerCase()
     result = result.filter(item =>
@@ -114,7 +82,7 @@ const filteredItems = computed(() => {
 .item-list-wrapper {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 16px;
 }
 
 .filter-bar {
@@ -130,73 +98,6 @@ const filteredItems = computed(() => {
   gap: 4px;
 }
 
-.filter-btn {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 10px 18px;
-  border: 2px solid rgba(255,255,255,0.3);
-  border-radius: var(--radius-pill);
-  background: rgba(255,255,255,0.1);
-  color: var(--color-on-primary);
-  font-weight: var(--font-weight-bold);
-  font-size: 13px;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  cursor: pointer;
-  transition: all 0.25s ease;
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
-}
-
-.filter-btn:hover {
-  background: rgba(255,255,255,0.2);
-  border-color: rgba(255,255,255,0.5);
-}
-
-.filter-btn.active {
-  background: var(--color-surface);
-  color: var(--color-text-main);
-  border-color: var(--color-on-primary);
-}
-
-.filter-count {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 20px;
-  height: 20px;
-  border-radius: 10px;
-  background: rgba(255,255,255,0.2);
-  font-size: 11px;
-  font-weight: var(--font-weight-heavy);
-  padding: 0 5px;
-}
-
-.filter-btn.active .filter-count {
-  background: var(--color-text-main);
-  color: var(--color-on-primary);
-}
-
-.filter-select {
-  padding: 10px 16px;
-  border: 2px solid rgba(255,255,255,0.3);
-  border-radius: var(--radius-pill);
-  background: rgba(255,255,255,0.1);
-  color: var(--color-on-primary);
-  font-weight: var(--font-weight-bold);
-  font-size: 13px;
-  cursor: pointer;
-  outline: none;
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
-}
-
-.filter-select option {
-  background: var(--color-surface);
-  color: var(--color-text-main);
-}
-
 .search-box {
   flex: 1;
   min-width: 200px;
@@ -208,32 +109,30 @@ const filteredItems = computed(() => {
   left: 16px;
   top: 50%;
   transform: translateY(-50%);
-  color: rgba(255,255,255,0.6);
+  color: #99AD7A;
   pointer-events: none;
 }
 
 .search-input {
   width: 100%;
   padding: 10px 20px 10px 40px;
-  border: 2px solid rgba(255,255,255,0.3);
+  border: 2px solid #DCCCAC;
   border-radius: var(--radius-pill);
-  background: rgba(255,255,255,0.1);
+  background: rgba(255, 248, 236, 0.6);
   font-size: 14px;
   font-weight: var(--font-weight-medium);
-  color: var(--color-on-primary);
+  color: #546B41;
   outline: none;
   transition: all 0.25s ease;
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
 }
 
 .search-input:focus {
-  border-color: rgba(255,255,255,0.6);
-  background: rgba(255,255,255,0.15);
+  border-color: #99AD7A;
+  background: #FFF8EC;
 }
 
 .search-input::placeholder {
-  color: rgba(255,255,255,0.5);
+  color: #99AD7A;
 }
 
 .items-grid {
@@ -255,8 +154,8 @@ const filteredItems = computed(() => {
   width: 120px;
   height: 120px;
   border-radius: 50%;
-  background: rgba(255,255,255,0.1);
-  color: rgba(255,255,255,0.4);
+  background: rgba(84, 107, 65, 0.08);
+  color: #99AD7A;
   margin-bottom: 24px;
   animation: float 3s ease-in-out infinite;
 }
@@ -265,7 +164,7 @@ const filteredItems = computed(() => {
   font-size: 28px;
   letter-spacing: -0.02em;
   margin: 0 0 8px 0;
-  color: var(--color-on-primary);
+  color: #546B41;
   opacity: 0.9;
 }
 
@@ -273,7 +172,7 @@ const filteredItems = computed(() => {
   font-size: 16px;
   font-weight: var(--font-weight-medium);
   opacity: 0.7;
-  color: var(--color-on-primary);
+  color: #99AD7A;
 }
 
 @media (max-width: 768px) {

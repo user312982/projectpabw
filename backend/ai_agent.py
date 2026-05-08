@@ -1,148 +1,411 @@
 """
-LangGraph AI Agent for ITK LostFound.
+LangGraph AI Agent untuk ITK LostFound dengan RAG.
 
 Tools:
-1. report_lost_item   — Laporkan barang hilang
-2. report_found_item  — Laporkan barang ditemukan
-3. search_items       — Cari barang berdasarkan keyword/kategori
+1. report_lost_item   — Laporkan barang hilang (wajib: nama & lokasi)
+2. report_found_item  — Laporkan barang ditemukan (wajib: nama & lokasi)
+3. search_items       — Cari barang berdasarkan kata kunci/kategori
 4. list_recent_items  — Lihat laporan terbaru
 5. match_items        — Cari kecocokan barang hilang & ditemukan
+6. update_item_tool   — Perbarui data laporan
+7. delete_item_tool   — Hapus laporan
+
+Fitur:
+- RAG (Retrieval-Augmented Generation) untuk semantic search
+- Chat history / konteks percakapan
+- Deteksi kebingungan dan respons yang sesuai
+- Wajib nama & lokasi untuk laporan
+- Tidak keluar konteks
 """
 
-from langchain_groq import ChatGroq
-from langgraph.prebuilt import create_react_agent
-from langchain_core.tools import tool
-from pydantic import BaseModel, Field
-from typing import Optional
-from database import SessionLocal, Item, ItemType, ItemCategory, ItemStatus, generate_unique_code
-from datetime import datetime
 import os
+import re
+import time
 import traceback
+from datetime import datetime, timedelta
+from typing import Dict, List, Optional
 
-# ── LLM Setup (Groq — Free & Fast) ────────────────────────────────
+# ── Rate Limiter ──────────────────────────────────────────────────
+# Simple rate limiter: max 10 requests per minute
+_last_request_time = 0
+_min_interval = 10.0  # seconds between requests (6 per minute = 10s each)
 
-llm = ChatGroq(
-    model="llama-3.3-70b-versatile",
-    temperature=0,
-    api_key=os.getenv("GROQ_API_KEY"),
+from database import (
+    Item,
+    ItemCategory,
+    ItemStatus,
+    ItemType,
+    SessionLocal,
+    generate_unique_code,
+)
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
+from langchain_core.tools import tool
+from langchain_deepseek import ChatDeepSeek
+from pydantic import BaseModel, Field
+from rag import rag_system
+
+# ── LLM Setup (DeepSeek V4) ────────────────────────────────
+
+llm = ChatDeepSeek(
+    model="deepseek-chat",
+    temperature=0.2,
+    api_key=os.getenv("DEEPSEEK_API_KEY"),
+    max_tokens=1000,
 )
 
 # ── Pydantic Schemas for Strict Tool Calling ───────────────────────
 
+
 class ReportLostInput(BaseModel):
-    title: str = Field(description="Nama atau judul barang yang hilang (wajib)")
-    reporter_name: str = Field(description="Nama pelapor yang kehilangan barang (wajib)")
-    category: str = Field(default="lainnya", description="Kategori: elektronik/pakaian/dokumen/aksesoris/tas/kunci/lainnya")
-    description: str = Field(default="", description="Deskripsi detail tentang barang (warna, merk, ciri khas)")
-    location: str = Field(default="", description="Lokasi detail tempat terakhir barang terlihat")
-    reporter_contact: str = Field(default="", description="Kontak pelapor (No HP atau email)")
+    title: str = Field(description="NAMA atau judul barang yang hilang (WAJIB diisi)")
+    reporter_name: Optional[str] = Field(
+        default=None, description="NAMA pelapor yang kehilangan barang (opsional, isi jika disebutkan)"
+    )
+    category: str = Field(
+        default="lainnya",
+        description="Kategori: elektronik/pakaian/dokumen/aksesoris/tas/kunci/lainnya",
+    )
+    description: str = Field(
+        default="",
+        description="Deskripsi detail tentang barang: warna, merk, ciri khas",
+    )
+    location: str = Field(description="LOKASI terakhir barang terlihat (WAJIB diisi)")
+    reporter_contact: str = Field(
+        default="", description="Kontak pelapor: No HP atau email"
+    )
+
 
 class ReportFoundInput(BaseModel):
-    title: str = Field(description="Nama atau judul barang yang ditemukan (wajib)")
-    reporter_name: str = Field(description="Nama penemu barang (wajib)")
-    category: str = Field(default="lainnya", description="Kategori: elektronik/pakaian/dokumen/aksesoris/tas/kunci/lainnya")
-    description: str = Field(default="", description="Deskripsi detail tentang barang (warna, merk, ciri khas)")
-    location: str = Field(default="", description="Lokasi detail tempat barang ditemukan")
-    reporter_contact: str = Field(default="", description="Kontak penemu (No HP atau email)")
+    title: str = Field(
+        description="NAMA atau judul barang yang ditemukan (WAJIB diisi)"
+    )
+    reporter_name: Optional[str] = Field(
+        default=None, description="NAMA penemu barang (opsional, isi jika disebutkan)"
+    )
+    category: str = Field(
+        default="lainnya",
+        description="Kategori: elektronik/pakaian/dokumen/aksesoris/tas/kunci/lainnya",
+    )
+    description: str = Field(
+        default="",
+        description="Deskripsi detail tentang barang: warna, merk, ciri khas",
+    )
+    location: str = Field(
+        description="LOKASI detail tempat barang ditemukan (WAJIB diisi)"
+    )
+    reporter_contact: str = Field(
+        default="", description="Kontak penemu: No HP atau email"
+    )
+
 
 class SearchItemsInput(BaseModel):
-    keyword: str = Field(default="", description="Kata kunci pencarian (nama atau deskripsi barang)")
-    category: str = Field(default="", description="Filter kategori: elektronik/pakaian/dokumen/aksesoris/tas/kunci/lainnya")
-    type: str = Field(default="", description="Filter tipe laporan ('lost' untuk hilang, 'found' untuk ditemukan)")
+    keyword: str = Field(
+        default="", description="Kata kunci pencarian (nama atau deskripsi barang)"
+    )
+    category: str = Field(
+        default="",
+        description="Filter kategori: elektronik/pakaian/dokumen/aksesoris/tas/kunci/lainnya",
+    )
+    type: str = Field(
+        default="",
+        description="Filter tipe laporan ('lost' untuk hilang, 'found' untuk ditemukan)",
+    )
+
 
 class ListRecentInput(BaseModel):
-    limit: int = Field(default=10, description="Jumlah maksimal laporan yang ingin ditampilkan")
+    limit: int = Field(
+        default=10, description="Jumlah maksimal laporan yang ingin ditampilkan"
+    )
+
 
 class MatchItemsInput(BaseModel):
-    keyword: str = Field(default="", description="Kata kunci pencarian barang untuk dicocokkan")
+    keyword: str = Field(
+        default="", description="Kata kunci pencarian barang untuk dicocokkan"
+    )
+
+
+class UpdateItemInput(BaseModel):
+    unique_code: str = Field(
+        description="KODE UNIK laporan barang (wajib, contoh: LF-ABCD12)"
+    )
+    title: Optional[str] = Field(
+        default=None, description="Nama barang baru (jika ingin diubah)"
+    )
+    description: Optional[str] = Field(
+        default=None, description="Deskripsi baru (jika ingin diubah)"
+    )
+    location: Optional[str] = Field(
+        default=None, description="Lokasi baru (jika ingin diubah)"
+    )
+    reporter_name: Optional[str] = Field(
+        default=None, description="Nama pelapor/penemu baru (jika ingin diubah)"
+    )
+    reporter_contact: Optional[str] = Field(
+        default=None, description="Kontak pelapor/penemu baru (jika ingin diubah)"
+    )
+    status: Optional[str] = Field(
+        default=None, description="Status laporan: open/claimed/closed"
+    )
+
+
+class DeleteItemInput(BaseModel):
+    unique_code: str = Field(
+        description="KODE UNIK laporan barang yang ingin dihapus (wajib, contoh: LF-ABCD12)"
+    )
+
 
 # ── Tools ──────────────────────────────────────────────────────────
 
+
 @tool(args_schema=ReportLostInput)
-def report_lost_item(title: str, reporter_name: str, category: str = "lainnya", description: str = "", location: str = "", reporter_contact: str = "") -> str:
-    """Simpan data laporan barang hilang ke database sistem ITK LostFound."""
-    if not title.strip() or not reporter_name.strip():
-        return "[ERROR] Nama barang dan nama pelapor tidak boleh kosong."
+def report_lost_item(
+    title: str,
+    reporter_name: Optional[str] = None,
+    category: str = "lainnya",
+    description: str = "",
+    location: str = "",
+    reporter_contact: str = "",
+) -> str:
+    """Simpan data laporan barang hilang ke database sistem ITK LostFound.
+    WAJIB: title (nama barang) dan location (lokasi terakhir) harus diisi. reporter_name (nama pelapor) opsional.
+    SEBELUM melaporkan, sistem akan mencari barang serupa di database."""
+    if not title or not title.strip():
+        return "[ERROR] Nama barang tidak boleh kosong! Mohon beri tahu nama barang yang hilang."
+    if not location or not location.strip():
+        return "[ERROR] Lokasi terakhir barang tidak boleh kosong! Mohon beri tahu di mana terakhir kali barang terlihat."
 
+    # Validasi kategori
     valid_categories = [c.value for c in ItemCategory]
-    if category not in valid_categories:
-        category = "lainnya"
+    if category and category not in valid_categories:
+        return f"[ERROR] Kategori '{category}' tidak valid. Pilih: {', '.join(valid_categories)}"
 
+    # 🔍 CARI BARANG SERUPA TERLEBIH DAHULU
     db = SessionLocal()
     try:
+        # Cari barang ditemukan yang mungkin cocok
+        found_items = db.query(Item).filter(
+            Item.type == "found",
+            Item.status == "open"
+        ).all()
+        
+        similar_items = []
+        for found in found_items:
+            score = 0
+            # Cek kategori sama
+            if category == found.category:
+                score += 2
+            # Cek judul mirip
+            title_lower = title.lower()
+            found_title_lower = found.title.lower()
+            if title_lower in found_title_lower or found_title_lower in title_lower:
+                score += 3
+            # Cek lokasi mirip
+            if location and found.location:
+                loc_lower = location.lower()
+                found_loc_lower = found.location.lower()
+                if loc_lower in found_loc_lower or found_loc_lower in loc_lower:
+                    score += 2
+            # Cek deskripsi (jika ada)
+            if description and found.description:
+                desc_lower = description.lower()
+                found_desc_lower = found.description.lower()
+                if any(word in found_desc_lower for word in desc_lower.split() if len(word) > 3):
+                    score += 1
+            
+            if score >= 3:  # Threshold kecocokan
+                similar_items.append((found, score))
+        
+        # Jika ada yang cocok, beri tahu user
+        if similar_items:
+            similar_items.sort(key=lambda x: x[1], reverse=True)
+            lines = ["[PERHATIAN] 🔍 Ditemukan barang serupa di database:"]
+            for found, score in similar_items[:3]:  # Max 3 hasil
+                lines.append(
+                    f"\n- **{found.title}** (Ditemukan)\n"
+                    f"  Lokasi: {found.location}\n"
+                    f"  Kategori: {found.category}\n"
+                    f"  Penemu: {found.reporter_name or 'Anonim'}\n"
+                    f"  Kontak: {found.reporter_contact or '-'}\n"
+                    f"  Kode: {found.unique_code}\n"
+                    f"  Tingkat kecocokan: {'⭐' * min(score, 5)}"
+                )
+            lines.append("\n💡 Apakah ini barang yang Anda maksud? Jika ya, Anda bisa menghubungi penemu langsung.")
+            lines.append("Jika tetap ingin melanjutkan laporan hilang, silakan konfirmasi.")
+            return "\n".join(lines)
+        
+        # Jika tidak ada yang cocok, lanjutkan buat laporan
         item = Item(
             unique_code=generate_unique_code(db),
-            title=title,
-            description=description,
-            category=category,
+            title=title.strip(),
+            description=description.strip() if description else "",
+            category=category if category in valid_categories else "lainnya",
             type=ItemType.lost.value,
-            location=location,
+            location=location.strip(),
             date_event=datetime.now(),
             status=ItemStatus.open.value,
-            reporter_name=reporter_name,
-            reporter_contact=reporter_contact,
+            reporter_name=(reporter_name.strip() if reporter_name else "Anonim"),
+            reporter_contact=reporter_contact.strip() if reporter_contact else "",
         )
         db.add(item)
         db.commit()
         db.refresh(item)
+
+        # Add to RAG index
+        rag_system.add_item(item)
+
         return (
-            f"[SUCCESS] Laporan barang hilang berhasil dibuat!\n"
+            f"[SUCCESS] ✅ Laporan barang hilang berhasil dibuat!\n"
             f"   Kode Unik: {item.unique_code}\n"
             f"   Barang: {title}\n"
             f"   Kategori: {category}\n"
-            f"   Lokasi: {location or '-'}\n"
-            f"   Pelapor: {reporter_name}\n"
+            f"   Lokasi terakhir: {location}\n"
+            f"   Pelapor: {reporter_name.strip() if reporter_name else 'Anonim'}\n"
         )
     finally:
         db.close()
+
 
 @tool(args_schema=ReportFoundInput)
-def report_found_item(title: str, reporter_name: str, category: str = "lainnya", description: str = "", location: str = "", reporter_contact: str = "") -> str:
-    """Simpan data laporan barang yang ditemukan ke database sistem ITK LostFound."""
-    if not title.strip() or not reporter_name.strip():
-        return "[ERROR] Nama barang dan nama penemu tidak boleh kosong."
+def report_found_item(
+    title: str,
+    reporter_name: Optional[str] = None,
+    category: str = "lainnya",
+    description: str = "",
+    location: str = "",
+    reporter_contact: str = "",
+) -> str:
+    """Simpan data laporan barang ditemukan ke database sistem ITK LostFound.
+    WAJIB: title (nama barang) dan location (lokasi ditemukan) harus diisi. reporter_name (nama penemu) opsional.
+    SEBELUM melaporkan, sistem akan mencari barang hilang yang mungkin cocok."""
+    if not title or not title.strip():
+        return "[ERROR] Nama barang tidak boleh kosong! Mohon beri tahu nama barang yang ditemukan."
+    if not location or not location.strip():
+        return "[ERROR] Lokasi ditemukan tidak boleh kosong! Mohon beri tahu di mana barang ditemukan."
 
     valid_categories = [c.value for c in ItemCategory]
-    if category not in valid_categories:
-        category = "lainnya"
+    if category and category not in valid_categories:
+        return f"[ERROR] Kategori '{category}' tidak valid. Pilih: {', '.join(valid_categories)}"
 
+    # 🔍 CARI BARANG HILANG YANG SERUPA TERLEBIH DAHULU
     db = SessionLocal()
     try:
+        # Cari barang hilang yang mungkin cocok
+        lost_items = db.query(Item).filter(
+            Item.type == "lost",
+            Item.status == "open"
+        ).all()
+        
+        similar_items = []
+        for lost in lost_items:
+            score = 0
+            # Cek kategori sama
+            if category == lost.category:
+                score += 2
+            # Cek judul mirip
+            title_lower = title.lower()
+            lost_title_lower = lost.title.lower()
+            if title_lower in lost_title_lower or lost_title_lower in title_lower:
+                score += 3
+            # Cek lokasi mirip
+            if location and lost.location:
+                loc_lower = location.lower()
+                lost_loc_lower = lost.location.lower()
+                if loc_lower in lost_loc_lower or lost_loc_lower in loc_lower:
+                    score += 2
+            # Cek deskripsi (jika ada)
+            if description and lost.description:
+                desc_lower = description.lower()
+                lost_desc_lower = lost.description.lower()
+                if any(word in lost_desc_lower for word in desc_lower.split() if len(word) > 3):
+                    score += 1
+            
+            if score >= 3:  # Threshold kecocokan
+                similar_items.append((lost, score))
+        
+        # Jika ada yang cocok, beri tahu user
+        if similar_items:
+            similar_items.sort(key=lambda x: x[1], reverse=True)
+            lines = ["[PERHATIAN] 🔍 Ditemukan barang hilang yang serupa:"]
+            for lost, score in similar_items[:3]:  # Max 3 hasil
+                lines.append(
+                    f"\n- **{lost.title}** (Hilang)\n"
+                    f"  Lokasi: {lost.location}\n"
+                    f"  Kategori: {lost.category}\n"
+                    f"  Pelapor: {lost.reporter_name or 'Anonim'}\n"
+                    f"  Kontak: {lost.reporter_contact or '-'}\n"
+                    f"  Kode: {lost.unique_code}\n"
+                    f"  Tingkat kecocokan: {'⭐' * min(score, 5)}"
+                )
+            lines.append("\n💡 Apakah ini barang yang Anda maksud? Jika ya, Anda bisa menghubungi pemilik langsung.")
+            lines.append("Jika tetap ingin melanjutkan laporan ditemukan, silakan konfirmasi.")
+            return "\n".join(lines)
+        
+        # Jika tidak ada yang cocok, lanjutkan buat laporan
         item = Item(
             unique_code=generate_unique_code(db),
-            title=title,
-            description=description,
-            category=category,
+            title=title.strip(),
+            description=description.strip() if description else "",
+            category=category if category in valid_categories else "lainnya",
             type=ItemType.found.value,
-            location=location,
+            location=location.strip(),
             date_event=datetime.now(),
             status=ItemStatus.open.value,
-            reporter_name=reporter_name,
-            reporter_contact=reporter_contact,
+            reporter_name=(reporter_name.strip() if reporter_name else "Anonim"),
+            reporter_contact=reporter_contact.strip() if reporter_contact else "",
         )
         db.add(item)
         db.commit()
         db.refresh(item)
+
+        # Add to RAG index
+        rag_system.add_item(item)
+
         return (
-            f"[SUCCESS] Laporan barang ditemukan berhasil dibuat!\n"
+            f"[SUCCESS] ✅ Laporan barang ditemukan berhasil dibuat!\n"
             f"   Kode Unik: {item.unique_code}\n"
             f"   Barang: {title}\n"
             f"   Kategori: {category}\n"
-            f"   Lokasi: {location or '-'}\n"
-            f"   Penemu: {reporter_name}\n"
+            f"   Lokasi ditemukan: {location}\n"
+            f"   Penemu: {reporter_name.strip() if reporter_name else 'Anonim'}\n"
         )
     finally:
         db.close()
+
 
 @tool(args_schema=SearchItemsInput)
 def search_items(keyword: str = "", category: str = "", type: str = "") -> str:
-    """Cari daftar barang hilang atau ditemukan berdasarkan kata kunci, kategori, atau tipe."""
+    """Cari daftar barang hilang atau ditemukan berdasarkan kata kunci, kategori, atau tipe.
+    Gunakan RAG untuk semantic search yang lebih akurat."""
     db = SessionLocal()
     try:
+        # Gunakan RAG untuk semantic search jika ada keyword
+        if keyword:
+            type_filter = type if type else None
+            rag_results = rag_system.retrieve(
+                keyword, n_results=10, type_filter=type_filter
+            )
+            if rag_results:
+                lines = ["**Hasil Pencarian (RAG - Semantic Search):**\n"]
+                for i, r in enumerate(rag_results, 1):
+                    type_label = "HILANG 🔴" if r["type"] == "lost" else "DITEMUKAN 🟢"
+                    lines.append(
+                        f"{i}. [{type_label}] {r['title']}\n"
+                        f"   Kategori: {r['category']}, Lokasi: {r['location'] or '-'}\n"
+                        f"   Skor Relevansi: {r['relevance_score']:.2f}"
+                    )
+                lines.append(f"\nTotal: {len(rag_results)} hasil ditemukan")
+                return "\n".join(lines)
+
+        # Fallback ke SQL search
         query = db.query(Item).order_by(Item.created_at.desc())
 
         if keyword:
-            query = query.filter((Item.title.ilike(f"%{keyword}%")) | (Item.description.ilike(f"%{keyword}%")))
+            kw = f"%{keyword}%"
+            query = query.filter(
+                (Item.title.ilike(kw))
+                | (Item.description.ilike(kw))
+                | (Item.location.ilike(kw))
+            )
         if category:
             query = query.filter(Item.category == category)
         if type:
@@ -150,18 +413,20 @@ def search_items(keyword: str = "", category: str = "", type: str = "") -> str:
 
         items = query.limit(20).all()
         if not items:
-            return "[INFO] Tidak ada barang yang cocok dengan pencarian."
+            return "[INFO] Tidak ada barang yang cocok dengan pencarian. Coba gunakan kata kunci yang berbeda."
 
         lines = ["**Hasil Pencarian:**\n"]
         for i, item in enumerate(items, 1):
-            type_label = "HILANG" if item.type == "lost" else "DITEMUKAN"
+            type_label = "HILANG 🔴" if item.type == "lost" else "DITEMUKAN 🟢"
             lines.append(
-                f"{i}. [{type_label}] {item.title} (Kategori: {item.category}, Lokasi: {item.location or '-'})"
+                f"{i}. [{type_label}] {item.title}\n"
+                f"   Kategori: {item.category}, Lokasi: {item.location or '-'}"
             )
-        lines.append(f"Total: {len(items)} hasil")
+        lines.append(f"\nTotal: {len(items)} hasil")
         return "\n".join(lines)
     finally:
         db.close()
+
 
 @tool(args_schema=ListRecentInput)
 def list_recent_items(limit: int = 10) -> str:
@@ -172,25 +437,34 @@ def list_recent_items(limit: int = 10) -> str:
         if not items:
             return "[INFO] Belum ada laporan barang."
 
-        lines = ["**Laporan Terbaru:**\n"]
+        lines = ["**📋 Laporan Terbaru:**\n"]
         for i, item in enumerate(items, 1):
-            type_label = "HILANG" if item.type == "lost" else "DITEMUKAN"
-            lines.append(f"{i}. [{type_label}] {item.title} - Lokasi: {item.location or '-'}")
+            type_label = "HILANG 🔴" if item.type == "lost" else "DITEMUKAN 🟢"
+            lines.append(
+                f"{i}. [{type_label}] {item.title}\n"
+                f"   Kategori: {item.category}, Lokasi: {item.location or '-'}, Status: {item.status}"
+            )
         return "\n".join(lines)
     finally:
         db.close()
 
+
 @tool(args_schema=MatchItemsInput)
 def match_items(keyword: str = "") -> str:
-    """Cari algoritma kecocokan antara laporan barang yang hilang dan barang yang ditemukan di database."""
+    """Cari kecocokan antara laporan barang yang hilang dan barang yang ditemukan di database."""
     db = SessionLocal()
     try:
         lost_query = db.query(Item).filter(Item.type == "lost", Item.status == "open")
         found_query = db.query(Item).filter(Item.type == "found", Item.status == "open")
 
         if keyword:
-            lost_query = lost_query.filter((Item.title.ilike(f"%{keyword}%")) | (Item.description.ilike(f"%{keyword}%")))
-            found_query = found_query.filter((Item.title.ilike(f"%{keyword}%")) | (Item.description.ilike(f"%{keyword}%")))
+            kw = f"%{keyword}%"
+            lost_query = lost_query.filter(
+                (Item.title.ilike(kw)) | (Item.description.ilike(kw))
+            )
+            found_query = found_query.filter(
+                (Item.title.ilike(kw)) | (Item.description.ilike(kw))
+            )
 
         lost_items = lost_query.all()
         found_items = found_query.all()
@@ -201,78 +475,340 @@ def match_items(keyword: str = "") -> str:
         matches = []
         for lost in lost_items:
             for found in found_items:
+                score = 0
+                # Cek kecocokan berdasarkan kategori
                 if lost.category == found.category:
-                    score = 0
-                    if lost.title.lower() in found.title.lower() or found.title.lower() in lost.title.lower():
-                        score += 2
-                    if lost.location and found.location and (lost.location.lower() in found.location.lower() or found.location.lower() in lost.location.lower()):
-                        score += 1
-                    if score > 0:
-                        matches.append((lost, found, score))
+                    score += 1
+                # Cek judul yang mirip
+                if (
+                    lost.title.lower() in found.title.lower()
+                    or found.title.lower() in lost.title.lower()
+                ):
+                    score += 2
+                # Cek lokasi yang mirip
+                if (
+                    lost.location
+                    and found.location
+                    and (
+                        lost.location.lower() in found.location.lower()
+                        or found.location.lower() in lost.location.lower()
+                    )
+                ):
+                    score += 1
+                if score > 0:
+                    matches.append((lost, found, score))
 
         if not matches:
-            return "[INFO] Tidak ditemukan kecocokan otomatis."
+            return "[INFO] Tidak ditemukan kecocokan otomatis saat ini."
 
         matches.sort(key=lambda x: x[2], reverse=True)
-        lines = ["**Kemungkinan Kecocokan:**\n"]
+        lines = ["**🔗 Kemungkinan Kecocokan:**\n"]
         for i, (lost, found, score) in enumerate(matches[:10], 1):
             lines.append(
-                f"{i}. HILANG: '{lost.title}' dengan DITEMUKAN: '{found.title}'\n"
-                f"   Skor kecocokan: {score}/3 | Kontak pemilik: {lost.reporter_name} | Kontak penemu: {found.reporter_name}"
+                f"{i}. HILANG: '{lost.title}' ↔ DITEMUKAN: '{found.title}'\n"
+                f"   Skor kecocokan: {score}/4 | Pelapor: {lost.reporter_name or 'Anonim'} | Penemu: {found.reporter_name or 'Anonim'}"
             )
         return "\n".join(lines)
     finally:
         db.close()
 
-# ── Agent Setup (Manual Tool Calling Loop) ─────────────────────────
 
-tools = [report_lost_item, report_found_item, search_items, list_recent_items, match_items]
+@tool(args_schema=UpdateItemInput)
+def update_item_tool(
+    unique_code: str,
+    title: Optional[str] = None,
+    description: Optional[str] = None,
+    location: Optional[str] = None,
+    reporter_name: Optional[str] = None,
+    reporter_contact: Optional[str] = None,
+    status: Optional[str] = None,
+) -> str:
+    """Perbarui (update) data atau status laporan barang berdasarkan kode unik. Bisa mengubah nama pelapor/penemu dan kontak juga."""
+    if not unique_code or not unique_code.strip():
+        return "[ERROR] Kode unik tidak boleh kosong!"
 
-SYSTEM_PROMPT = """Kamu adalah asisten penjaga ITK LostFound, platform pencarian barang hilang dan ditemukan di kampus ITK.
+    db = SessionLocal()
+    try:
+        item = db.query(Item).filter(Item.unique_code == unique_code).first()
+        if not item:
+            return f"[ERROR] Barang dengan kode unik {unique_code} tidak ditemukan."
 
-PANDUAN SANGAT PENTING (BACA DENGAN TELITI):
-1. BEDAKAN ANTARA "MENCARI" DAN "MELAPOR":
-   - Jika pengguna berkata "saya mau cari barang", "carikan", atau "apakah ada", GUNAKAN `search_items`. 
-   - JANGAN PERNAH menggunakan `report_lost_item` atau `report_found_item` jika pengguna hanya ingin mencari.
-2. JANGAN BERHALUSINASI (MENGARANG DATA):
-   - Jika pengguna ingin membuat laporan (hilang/ditemukan), kamu TIDAK BOLEH mengarang nama pelapor, judul barang, lokasi, dsb.
-   - Jika data *title* atau *reporter_name* belum diberikan oleh pengguna, KAMU WAJIB BERTANYA terlebih dahulu sebelum memanggil tool pelaporan.
-   - Jika ragu apakah pengguna ingin mencari atau melapor, BERTANYALAH untuk mengklarifikasi ("Apakah Anda ingin mencari barang ini di data kami, atau membuat laporan baru?").
-3. RESPON INTERAKTIF:
-   - Jika kamu selesai menggunakan `search_items` dan data ditemukan, bilang "Ini hasilnya di panel sebelah kiri. Apakah ada ciri spesifik yang ingin Anda tambahkan?". 
-   - JANGAN sebutkan ulang isi laporan/data di layar chat. Cukup katakan "Data telah disinkronkan, silakan periksa di tabel sebelah kiri layar Anda."
-4. ATURAN TOOL:
-   - JIKA kamu memanggil tool, DILARANG KERAS menyertakan narasi/teks pengantar sebelum tool terpanggil. Langsung gunakan output JSON dari tool!
+        if title:
+            item.title = title.strip()
+        if description:
+            item.description = description.strip()
+        if location:
+            item.location = location.strip()
+        if reporter_name:
+            item.reporter_name = reporter_name.strip()
+        if reporter_contact:
+            item.reporter_contact = reporter_contact.strip()
+        if status:
+            valid_statuses = [s.value for s in ItemStatus]
+            if status in valid_statuses:
+                item.status = status
+            else:
+                return (
+                    f"[ERROR] Status tidak valid. Gunakan: {', '.join(valid_statuses)}"
+                )
+
+        db.commit()
+
+        # Update RAG index
+        rag_system.update_item(item)
+
+        return f"[SUCCESS] ✅ Laporan barang ({unique_code}) berhasil diperbarui!"
+    except Exception as e:
+        return f"[ERROR] Gagal memperbarui barang: {str(e)}"
+    finally:
+        db.close()
+
+
+@tool(args_schema=DeleteItemInput)
+def delete_item_tool(unique_code: str) -> str:
+    """Hapus laporan barang dari sistem berdasarkan kode unik."""
+    if not unique_code or not unique_code.strip():
+        return "[ERROR] Kode unik tidak boleh kosong!"
+
+    db = SessionLocal()
+    try:
+        item = db.query(Item).filter(Item.unique_code == unique_code).first()
+        if not item:
+            return f"[ERROR] Barang dengan kode unik {unique_code} tidak ditemukan."
+
+        item_id = item.id
+        db.delete(item)
+        db.commit()
+
+        # Remove from RAG index
+        rag_system.delete_item(item_id)
+
+        return f"[SUCCESS] ✅ Laporan barang ({unique_code}) berhasil dihapus!"
+    except Exception as e:
+        return f"[ERROR] Gagal menghapus barang: {str(e)}"
+    finally:
+        db.close()
+
+
+# ── System Prompt yang Ketat ───────────────────────────────────────
+
+MAIN_SYSTEM_PROMPT = """Kamu adalah asisten ITK LostFound, platform resmi untuk melaporkan dan mencari barang hilang & ditemukan di kampus Institut Teknologi Kalimantan (ITK).
+
+## TUJUAN UTAMA
+Membantu mahasiswa, dosen, dan staf ITK dalam:
+1. Melaporkan barang hilang atau ditemukan
+2. Mencari barang berdasarkan deskripsi
+3. Mencocokkan barang hilang dengan barang ditemukan
+4. Melihat laporan terbaru
+
+## ATURAN WAJIB
+
+### 1. DATA WAJIB UNTUK LAPORAN:
+Untuk MELAPORKAN BARANG HILANG, WAJIB menanyakan dan mengisi:
+- ✅ NAMA BARANG (WAJIB)
+- ✅ LOKASI TERAKHIR (WAJIB)
+- NAMA PELAPOR (opsional, jika disebutkan baru diisi)
+- Kategori, Deskripsi, Kontak (opsional)
+
+Untuk MELAPORKAN BARANG DITEMUKAN, WAJIB menanyakan dan mengisi:
+- ✅ NAMA BARANG (WAJIB)
+- ✅ LOKASI DITEMUKAN (WAJIB)
+- NAMA PENEMU (opsional, jika disebutkan baru diisi)
+- Kategori, Deskripsi, Kontak (opsional)
+
+### 2. JANGAN PERNAH MENGARANG DATA:
+- Jika user belum memberikan title (nama barang) atau location, KAMU WAJIB BERTANYA.
+- Nama pelapor/penemu bersifat OPSIONAL. Jika user tidak menyebutkan namanya, jangan tanya lagi, langsung buat laporan dengan nama "Anonim".
+- UNTUK UPDATE/DELETE: Tanyakan KODE UNIK (contoh: LF-ABCD12).
+- JANGAN mengarang kode unik!
+
+### 3. BEDAKAN INTENSI USER:
+- "saya mau cari", "carikan", "apakah ada" → GUNAKAN `search_items`
+- "saya mau lapor", "saya kehilangan", "saya menemukan" → GUNAKAN `report_lost_item` / `report_found_item`
+- "saya mau ubah", "perbarui", "update" → GUNAKAN `update_item_tool`
+- "saya mau hapus", "hapus" → GUNAKAN `delete_item_tool`
+- "cocokkan", "match", "kecocokan" → GUNAKAN `match_items`
+- "laporan terbaru", "lihat semua", "tampilkan" → GUNAKAN `list_recent_items`
+
+### 3a. PERHATIAN: EDIT/HAPUS HANYA UNTUK PEMBUAT LAPORAN:
+- `update_item_tool` dan `delete_item_tool` akan otomatis ditolak jika user bukan pembuat laporan (atau petugas).
+- Jika sistem mengembalikan error izin, beri tahu user bahwa mereka tidak bisa mengubah/menghapus laporan orang lain.
+
+### 4. JIKA BINGUNG ATAU TIDAK PAHAM:
+- Jika tidak mengerti pertanyaan user, KATAKAN: "Maaf, saya kurang memahami maksud Anda. Bisa dijelaskan dengan lebih detail? Saya bisa membantu melaporkan barang hilang/ditemukan atau mencari barang."
+- Jika user bicara di luar topik barang hilang/ditemukan, arahkan kembali ke topik.
+- JANGAN menjawab pertanyaan yang tidak terkait dengan sistem LostFound.
+
+### 5. KONTEKS PERCAKAPAN:
+- Ingat konteks chat sebelumnya! Jika user baru saja menyebutkan suatu barang, gunakan informasi itu.
+- Jika user bilang "itu", "tersebut", atau "dia", pahami apa yang dimaksud dari chat sebelumnya.
+
+### 6. AUTO-MATCH SEBELUM LAPORAN:
+- `report_lost_item` dan `report_found_item` akan otomatis mencari barang serupa SEBELUM membuat laporan.
+- Jika ada kecocokan, sistem akan mengembalikan daftar barang serupa dan LAPORAN TIDAK JADI DIBUAT.
+- Jika ada kecocokan, informasikan ke user: "Saya menemukan X barang serupa di database. Apakah ini barang yang Anda maksud?"
+- Jika user konfirmasi bahwa itu memang barang yang dimaksud, arahkan ke kontak pelapor/penemu.
+- Jika user bilang "bukan" atau "lanjutkan", BARU panggil tool report_lost_item/report_found_item lagi untuk membuat laporan.
+- Tool akan otomatis mencari kecocokan saat pertama kali dipanggil, jadi cukup panggil toolnya.
+
+### 7. FORMAT RESPON:
+- JANGAN gunakan emoji sama sekali dalam respon
+- Jika `search_items` mengembalikan hasil, TIDAK perlu sebutkan detail barang satu per satu. Cukup bilang:
+  - "Saya menemukan X barang yang cocok. Silakan lihat di daftar kiri untuk detailnya."
+  - Atau "Tidak ada barang yang cocok dengan deskripsi tersebut."
+- Jika berhasil membuat/update/delete laporan, berikan kode uniknya saja
+- Gunakan bahasa Indonesia yang sederhana dan jelas
+
+## 🔧 TOOLS YANG TERSEDIA:
+- `report_lost_item` - Untuk melaporkan barang hilang
+- `report_found_item` - Untuk melaporkan barang ditemukan
+- `search_items` - Untuk mencari barang (gunakan RAG semantic search)
+- `list_recent_items` - Untuk melihat laporan terbaru
+- `match_items` - Untuk mencocokkan barang hilang & ditemukan
+- `update_item_tool` - Untuk memperbarui data laporan
+- `delete_item_tool` - Untuk menghapus laporan
 """
+
+# ── Tools List ─────────────────────────────────────────────────────
+
+tools = [
+    report_lost_item,
+    report_found_item,
+    search_items,
+    list_recent_items,
+    match_items,
+    update_item_tool,
+    delete_item_tool,
+]
 
 llm_with_tools = llm.bind_tools(tools)
 
-async def process_chat(message: str, chat_history: list = None) -> tuple[str, list]:
-    """Process a user chat message with an explicit, deterministic 2-step tool calling loop."""
-    from langchain_core.messages import HumanMessage, SystemMessage, ToolMessage
+# ── History Manager ────────────────────────────────────────────────
+
+CHAT_HISTORY_MAX = 20  # Maksimal pesan dalam riwayat
+
+
+def truncate_history(messages: list) -> list:
+    """Potong riwayat chat agar tidak terlalu panjang."""
+    if len(messages) > CHAT_HISTORY_MAX:
+        # Simpan system prompt + CHAT_HISTORY_MAX pesan terakhir
+        return [messages[0]] + messages[-(CHAT_HISTORY_MAX - 1) :]
+    return messages
+
+
+async def process_chat(message: str, chat_history: list = None, user_id: int = None, user_role: str = None) -> tuple:
+    """
+    Process a user chat message with RAG context, tool calling, and chat history.
+
+    Args:
+        message: Pesan dari user
+        chat_history: Riwayat percakapan (list of dict: {"role": "user"/"ai", "text": "..."})
+        user_id: ID user yang sedang login (untuk validasi kepemilikan)
+        user_role: Role user (user/petugas) untuk pengecekan akses
+
+    Returns:
+        Tuple (response_text, tools_used)
+    """
+    global _last_request_time
     
-    messages = [
-        SystemMessage(content=SYSTEM_PROMPT),
-        HumanMessage(content=message)
+    # Rate limiting: wait if request too frequent
+    current_time = time.time()
+    elapsed = current_time - _last_request_time
+    if elapsed < _min_interval:
+        wait_time = _min_interval - elapsed
+        time.sleep(wait_time)
+    _last_request_time = time.time()
+    
+    # Initialize messages with system prompt
+    messages = [SystemMessage(content=MAIN_SYSTEM_PROMPT)]
+
+    # Add chat history if available
+    if chat_history:
+        for msg in chat_history[-8:]:  # Ambil 8 pesan terakhir untuk konteks
+            if msg.get("role") == "user":
+                messages.append(HumanMessage(content=msg.get("text", "")))
+            elif msg.get("role") == "ai":
+                messages.append(AIMessage(content=msg.get("text", "")))
+
+    # Add RAG context if message seems like a search query
+    rag_context = ""
+    search_keywords = [
+        "cari",
+        "carikan",
+        "apakah ada",
+        "gimana cara",
+        "bagaimana",
+        "tahu",
+        "liat",
+        "lihat",
+        "cek",
+        "periksa",
+        "screen",
     ]
+    is_search_query = any(kw in message.lower() for kw in search_keywords)
+
+    if is_search_query:
+        rag_results = rag_system.retrieve(message, n_results=3)
+        if rag_results:
+            rag_parts = []
+            for r in rag_results:
+                type_label = "HILANG" if r["type"] == "lost" else "DITEMUKAN"
+                rag_parts.append(
+                    f"- [{type_label}] {r['title']} (Lokasi: {r['location'] or '-'})"
+                )
+            rag_context = (
+                "\n\n[INFO TAMBAHAN DARI DATABASE - Gunakan informasi ini jika relevan]:\n"
+                + "\n".join(rag_parts)
+            )
+
+    # Add user message with RAG context
+    user_msg = message + rag_context
+    messages.append(HumanMessage(content=user_msg))
 
     try:
-        # Panggilan 1: Biarkan LLM memutuskan ingin memanggil tool atau langsung merespons
+        # First call: LLM decides whether to call a tool
         response = await llm_with_tools.ainvoke(messages)
         messages.append(response)
 
-        # Jika LLM memutuskan untuk memanggil tool
+        tools_used = []
+
+        # If LLM decided to call tools
         if hasattr(response, "tool_calls") and response.tool_calls:
-            tools_used = []
             for tool_call in response.tool_calls:
                 tool_name = tool_call["name"]
                 tool_args = tool_call.get("args", {})
                 tool_id = tool_call["id"]
-                
-                tools_used.append({"name": tool_name, "args": tool_args})
-                
-                tool_result = "[ERROR] Alat tidak ditemukan"
-                # Cari dan jalankan tool yang sesuai
+
+                tool_info = {"name": tool_name, "args": tool_args}
+                tools_used.append(tool_info)
+
+                tool_result = "[ERROR] Tool tidak ditemukan"
+
+                # Ownership check for update/delete tools
+                if tool_name in ("update_item_tool", "delete_item_tool") and user_id is not None:
+                    unique_code = tool_args.get("unique_code", "")
+                    if unique_code:
+                        db = SessionLocal()
+                        try:
+                            item = db.query(Item).filter(Item.unique_code == unique_code).first()
+                            if not item:
+                                # Item tidak ditemukan - biarkan tool memberikan pesan error
+                                pass
+                            elif item.uploader_id is None:
+                                # Item dibuat via AI (tanpa login), hanya petugas yang bisa edit
+                                if user_role != "petugas":
+                                    tool_result = "[ERROR] ❌ Laporan ini dibuat tanpa akun, hanya petugas yang bisa mengedit."
+                                    messages.append(ToolMessage(content=str(tool_result), tool_call_id=tool_id, name=tool_name))
+                                    continue
+                            elif item.uploader_id != user_id and user_role != "petugas":
+                                # Bukan pemilik dan bukan petugas
+                                tool_result = "[ERROR] ❌ Anda tidak memiliki izin untuk mengubah atau menghapus laporan ini. Hanya pembuat laporan atau petugas yang bisa."
+                                messages.append(ToolMessage(content=str(tool_result), tool_call_id=tool_id, name=tool_name))
+                                continue
+                            # Kalau pemiliknya atau petugas, biarkan tool berjalan
+                        finally:
+                            db.close()
+
                 for t in tools:
                     if t.name == tool_name:
                         try:
@@ -280,27 +816,37 @@ async def process_chat(message: str, chat_history: list = None) -> tuple[str, li
                         except Exception as e:
                             tool_result = f"[ERROR] Gagal mengeksekusi tool: {str(e)}"
                         break
-                
-                # Masukkan hasil tool ke dalam riwayat pesan
-                messages.append(ToolMessage(
-                    content=str(tool_result),
-                    tool_call_id=tool_id,
-                    name=tool_name
-                ))
-            
-            # Panggilan 2: LLM memberikan jawaban akhir berdasarkan hasil tool
+
+                messages.append(
+                    ToolMessage(
+                        content=str(tool_result), tool_call_id=tool_id, name=tool_name
+                    )
+                )
+
+            # Second call: LLM provides final answer based on tool results
             final_response = await llm_with_tools.ainvoke(messages)
             return final_response.content, tools_used
-        
-        # Jika tidak memanggil tool, langsung return pesan
+
+        # If no tool called, return directly
         return response.content, []
 
     except Exception as e:
-        import traceback
         traceback.print_exc()
-        error_str = str(e)
-        if "tool_use_failed" in error_str.lower():
-            return "Maaf, ada kendala teknis saat memproses alat (tool_use_failed). Coba ubah sedikit struktur kalimat Anda."
-        if "rate limit" in error_str.lower():
-            return "Server AI sedang sibuk (Rate Limit). Mohon tunggu beberapa detik sebelum mencoba lagi."
-        return f"[INFO] Sistem sedang kelebihan beban. Mohon dicoba beberapa saat lagi. Detail: {error_str}"
+        error_str = str(e).lower()
+
+        if "tool_use_failed" in error_str:
+            return (
+                "Maaf, ada kendala teknis saat memproses. "
+                "Coba ubah sedikit cara Anda bertanya ya 😊",
+                [],
+            )
+        if "rate limit" in error_str:
+            return (
+                "Server AI sedang sibuk (Rate Limit). "
+                "Mohon tunggu beberapa saat sebelum mencoba lagi ⏳",
+                [],
+            )
+        return (
+            "Maaf, sistem sedang kelebihan beban. Mohon dicoba beberapa saat lagi 🙏",
+            [],
+        )

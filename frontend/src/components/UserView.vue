@@ -1,5 +1,22 @@
 <template>
   <div class="user-view" :class="{ 'has-searched': hasSearched }">
+    <!-- Logo -->
+    <div class="logo-container">
+      <svg class="logo-icon" width="32" height="32" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <!-- Outer circle -->
+        <circle cx="32" cy="32" r="30" stroke="#546B41" stroke-width="3" fill="#FFF8EC"/>
+        <!-- Magnifying glass -->
+        <circle cx="26" cy="26" r="12" stroke="#546B41" stroke-width="3" fill="none"/>
+        <line x1="35" y1="35" x2="44" y2="44" stroke="#546B41" stroke-width="3" stroke-linecap="round"/>
+        <!-- Inner dot representing found item -->
+        <circle cx="26" cy="26" r="4" fill="#99AD7A"/>
+      </svg>
+      <div class="logo-text">
+        <span class="logo-title">ITK</span>
+        <span class="logo-subtitle">Lost & Found</span>
+      </div>
+    </div>
+
     <!-- Top Right Guide Button -->
     <button class="guide-btn" @click="showGuide = true">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
@@ -42,7 +59,7 @@
            <h2>Hasil Pencarian & Laporan Terkini</h2>
            <p>Berikut adalah data yang ada di sistem, AI akan memandu Anda di sebelah kanan.</p>
         </div>
-        <ItemList :items="allItems" />
+        <ItemList :items="allItems" :user="user" @code-copied="handleCodeCopied" @updated="fetchItems" />
       </div>
       <div class="content-right">
         <!-- AiChat Component -->
@@ -60,7 +77,10 @@
           <li><strong>Lapor Hilang:</strong> "Saya mau lapor dompet saya hilang di gedung A, nama saya Budi"</li>
           <li><strong>Lapor Ditemukan:</strong> "Saya menemukan jam tangan di parkiran depan, saya Andi"</li>
           <li><strong>Melihat Data:</strong> "Tampilkan laporan terbaru"</li>
+          <li><strong>Mengubah Data:</strong> Klik tombol kode di card barang, lalu tekan enter untuk ubah</li>
+          <li><strong>Klaim Barang:</strong> Klik tombol kode di card barang, lalu tekan enter untuk klaim</li>
         </ul>
+        <p class="guide-hint">Tip: Klik tombol kode di samping card barang untuk mengubah atau klaim!</p>
         <button class="btn btn-black" @click="showGuide = false">Mengerti</button>
       </div>
     </div>
@@ -72,6 +92,13 @@ import { ref, onMounted } from 'vue'
 import api from '../services/api.js'
 import AiChat from './AiChat.vue'
 import ItemList from './ItemList.vue'
+
+const props = defineProps({
+  user: {
+    type: Object,
+    required: true,
+  },
+})
 
 const emit = defineEmits(['logout'])
 
@@ -114,6 +141,11 @@ async function handleDataChanged(toolsUsed) {
   fetchItems();
 }
 
+function handleCodeCopied(code) {
+  hasSearched.value = true
+  fetchItems()
+}
+
 function handleInitialSearch() {
   if (!initialQuery.value.trim()) return
   hasSearched.value = true
@@ -144,6 +176,53 @@ onMounted(() => {
 
 .user-view.has-searched {
   padding: 20px;
+}
+
+/* Logo Styles */
+.logo-container {
+  position: absolute;
+  top: 16px;
+  left: 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  z-index: 10;
+  background: rgba(255, 248, 236, 0.9);
+  padding: 8px 16px;
+  border-radius: 12px;
+  border: 1px solid #DCCCAC;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 2px 8px rgba(84, 107, 65, 0.1);
+  transition: all 0.3s ease;
+}
+
+.logo-container:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(84, 107, 65, 0.15);
+}
+
+.logo-icon {
+  flex-shrink: 0;
+}
+
+.logo-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+.logo-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #546B41;
+  letter-spacing: -0.02em;
+}
+
+.logo-subtitle {
+  font-size: 11px;
+  font-weight: 500;
+  color: #99AD7A;
+  letter-spacing: 0.02em;
 }
 
 .guide-btn {
@@ -268,8 +347,8 @@ onMounted(() => {
 /* Active Chat View */
 .active-chat-view {
   display: flex;
-  gap: 20px;
-  padding-top: 60px; /* Space for buttons */
+  gap: 16px;
+  padding-top: 52px; /* Space for buttons */
   flex: 1;
   min-height: 0;
 }
@@ -277,15 +356,15 @@ onMounted(() => {
   flex: 1;
   background: var(--color-surface);
   backdrop-filter: blur(12px);
-  border-radius: 24px;
-  padding: 24px 32px;
+  border-radius: 20px;
+  padding: 18px 24px;
   overflow-y: auto;
   border: 1px solid var(--color-border);
   animation: slideIn 0.5s ease;
 }
 .content-header {
-  margin-bottom: 24px;
-  padding-bottom: 20px;
+  margin-bottom: 16px;
+  padding-bottom: 14px;
   border-bottom: 1px solid var(--color-border);
 }
 .content-header h2 {

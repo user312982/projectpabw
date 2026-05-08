@@ -57,8 +57,13 @@ const error = ref('')
 
 const loginForm = ref({ username: '', password: '' })
 const registerForm = ref({ username: '', password: '', full_name: '', nim: '' })
+let abortController = null
 
 async function handleLogin() {
+  if (abortController) abortController.abort()
+  abortController = new AbortController()
+  const timeoutId = setTimeout(() => abortController.abort(), 10000)
+  
   loading.value = true
   error.value = ''
   try {
@@ -66,36 +71,52 @@ async function handleLogin() {
     formData.append('username', loginForm.value.username)
     formData.append('password', loginForm.value.password)
     
-    // Login menggunakan format URL-encoded untuk OAuth2 Password Bearer di FastAPI
     const res = await api.post('/api/auth/login', formData, {
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      signal: abortController.signal
     })
     
+    clearTimeout(timeoutId)
     localStorage.setItem('token', res.data.access_token)
+    localStorage.setItem('refresh_token', res.data.refresh_token)
     localStorage.setItem('user', JSON.stringify(res.data.user))
     emit('auth-success', res.data.user)
   } catch (err) {
+    clearTimeout(timeoutId)
+    if (err.code === 'ERR_CANCELED' || err.name === 'CanceledError') return
     console.error(err)
-    error.value = err.response?.data?.detail || 'Gagal login'
+    error.value = err.response?.data?.detail || err.message || 'Gagal login'
   } finally {
     loading.value = false
+    abortController = null
   }
 }
 
 async function handleRegister() {
+  if (abortController) abortController.abort()
+  abortController = new AbortController()
+  const timeoutId = setTimeout(() => abortController.abort(), 10000)
+  
   loading.value = true
   error.value = ''
   try {
-    const res = await api.post('/api/auth/register', registerForm.value)
+    const res = await api.post('/api/auth/register', registerForm.value, {
+      signal: abortController.signal
+    })
     
+    clearTimeout(timeoutId)
     localStorage.setItem('token', res.data.access_token)
+    localStorage.setItem('refresh_token', res.data.refresh_token)
     localStorage.setItem('user', JSON.stringify(res.data.user))
     emit('auth-success', res.data.user)
   } catch (err) {
+    clearTimeout(timeoutId)
+    if (err.code === 'ERR_CANCELED' || err.name === 'CanceledError') return
     console.error(err)
-    error.value = err.response?.data?.detail || 'Gagal daftar'
+    error.value = err.response?.data?.detail || err.message || 'Gagal daftar'
   } finally {
     loading.value = false
+    abortController = null
   }
 }
 </script>

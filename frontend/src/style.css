@@ -1,64 +1,63 @@
-/* ── Matcha / Sage Minimalist Palette ─────────────────────────────── */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+/* ── Sage Green Minimalist Palette ─────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 :root {
   /* Core Backgrounds */
-  --bg-color: #F2EDC2;          /* Cream */
-  --color-surface: #FBFAF2;     /* Slightly lighter cream/white for cards */
-  --color-surface-hover: #9FCB98; /* Light Green for hover effects */
-  
+  --bg-color: #DCCCAC;          /* Warm Beige */
+  --color-surface: #FFF8EC;     /* Cream for cards */
+  --color-surface-hover: #99AD7A; /* Medium Green for hover */
+
   /* Text Accents */
-  --color-text-main: #346739;   /* Dark Green (High Contrast against Cream) */
-  --color-text-muted: #79AE6F;  /* Medium Green */
+  --color-text-main: #546B41;   /* Dark Green */
+  --color-text-muted: #99AD7A;  /* Medium Green */
 
   /* Borders / Separators */
-  --color-border: #9FCB98;      /* Light Green */
+  --color-border: #DCCCAC;      /* Beige */
 
-  /* Primary Accent - Light Green (for strong buttons) */
-  --color-primary: #9FCB98;     /* Light Green */
-  --color-primary-dark: #79AE6F; 
-  --color-on-primary: #346739;  /* Dark Green text on Light Green button */
+  /* Primary Accent */
+  --color-primary: #546B41;     /* Dark Green */
+  --color-primary-dark: #3d4f2f;
+  --color-on-primary: #FFF8EC;  /* Cream text on green */
 
   /* Status Colors */
-  --color-lost: #346739;        
-  --color-found: #346739;       
-  --color-claimed: #346739;     
+  --color-lost: #546B41;
+  --color-found: #546B41;
+  --color-claimed: #546B41;
 
   /* Raw Neutral Fallbacks */
-  --color-white: #FFFFFF;
-  --color-black: #000000;
+  --color-white: #FFF8EC;
+  --color-black: #546B41;
   --color-gray: var(--color-border);
   --color-dark-gray: var(--color-text-muted);
-  --color-light-gray: var(--color-surface-hover);
+  --color-light-gray: #E8DFC8;
 
-  /* Gradients (Removed for Flat Design) */
+  /* Gradients */
   --gradient-primary: var(--color-primary);
-  --gradient-lost: rgba(52, 103, 57, 0.1);
-  --gradient-found: rgba(52, 103, 57, 0.1);
+  --gradient-lost: rgba(84, 107, 65, 0.08);
+  --gradient-found: rgba(84, 107, 65, 0.08);
   --gradient-accent: var(--color-surface-hover);
-  --gradient-dark: var(--color-surface);
-  --gradient-warm: rgba(121, 174, 111, 0.1);
+  --gradient-dark: var(--color-primary);
+  --gradient-warm: rgba(153, 173, 122, 0.15);
   --gradient-glass: transparent;
 
   /* Typography */
   --font-main: 'Inter', system-ui, -apple-system, sans-serif;
-  --font-weight-heavy: 600;
-  --font-weight-bold: 500;
+  --font-weight-heavy: 700;
+  --font-weight-bold: 600;
   --font-weight-medium: 500;
   --font-weight-normal: 400;
 
-  /* Subtle Radii */
-  --radius-xl: 12px;
-  --radius-lg: 8px;
-  --radius-md: 6px;
-  --radius-sm: 4px;
+  /* Radii */
+  --radius-xl: 16px;
+  --radius-lg: 12px;
+  --radius-md: 8px;
+  --radius-sm: 6px;
   --radius-pill: 9999px;
 
-  /* Shadows - Minimalist Drops (Since Cream has low depth naturally, 
-     slightly soft shadow helps elevate cards, but keeping mostly flat) */
-  --shadow-sm: 0 1px 2px rgba(52, 103, 57, 0.05);
-  --shadow-md: 0 4px 6px rgba(52, 103, 57, 0.08);
-  --shadow-lg: 0 10px 15px rgba(52, 103, 57, 0.1);
+  /* Shadows */
+  --shadow-sm: 0 1px 3px rgba(84, 107, 65, 0.08);
+  --shadow-md: 0 4px 12px rgba(84, 107, 65, 0.1);
+  --shadow-lg: 0 12px 24px rgba(84, 107, 65, 0.12);
 
   font-family: var(--font-main);
   font-size: 14px;
@@ -95,7 +94,7 @@ body {
 h1,h2,h3,h4 {
   font-family: var(--font-main);
   font-weight: var(--font-weight-heavy);
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
   line-height: 1.2;
   color: var(--color-text-main);
 }
@@ -123,7 +122,7 @@ h1,h2,h3,h4 {
   background: var(--color-primary);
   color: var(--color-on-primary);
   border: 1px solid transparent;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   padding: 10px 20px;
   font-weight: var(--font-weight-medium);
   font-size: 14px;
@@ -144,16 +143,16 @@ h1,h2,h3,h4 {
   background: transparent;
   color: var(--color-text-main);
   border: 2px solid var(--color-primary);
-  border-radius: var(--radius-sm);
-  padding: 8px 18px; /* Adjusted padding to account for 2px border */
-  font-weight: var(--font-weight-heavy);
+  border-radius: var(--radius-md);
+  padding: 8px 18px;
+  font-weight: var(--font-weight-bold);
   font-size: 14px;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .btn-outline:hover {
-  background: var(--color-text-main);
+  background: var(--color-primary);
   color: var(--color-on-primary);
 }
 
@@ -170,27 +169,27 @@ h1,h2,h3,h4 {
 }
 
 .badge-lost {
-  background: rgba(159, 203, 152, 0.3);
+  background: rgba(84, 107, 65, 0.1);
   color: var(--color-lost);
-  border-color: rgba(121, 174, 111, 0.4);
+  border-color: rgba(84, 107, 65, 0.2);
 }
 
 .badge-found {
-  background: rgba(159, 203, 152, 0.3);
+  background: rgba(153, 173, 122, 0.2);
   color: var(--color-found);
-  border-color: rgba(121, 174, 111, 0.4);
+  border-color: rgba(153, 173, 122, 0.3);
 }
 
 .badge-open {
-  background: var(--color-surface-hover);
+  background: var(--color-light-gray);
   color: var(--color-text-main);
   border-color: var(--color-border);
 }
 
 .badge-claimed {
-  background: rgba(159, 203, 152, 0.3);
+  background: rgba(220, 204, 172, 0.4);
   color: var(--color-claimed);
-  border-color: rgba(121, 174, 111, 0.4);
+  border-color: rgba(220, 204, 172, 0.6);
 }
 
 .badge-closed {
@@ -208,7 +207,6 @@ h1,h2,h3,h4 {
   box-shadow: var(--shadow-sm);
 }
 
-/* Add custom class for elements that were originally black text / dark */
 .bento-card {
   background: var(--color-surface);
   border: 1px solid var(--color-border);

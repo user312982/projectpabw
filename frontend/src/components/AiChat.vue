@@ -19,7 +19,7 @@
           <span class="empty-found">FOUND</span>
         </div>
         <p class="empty-desc">Tanya apapun tentang barang hilang & ditemukan</p>
-        
+
         <div class="chat-suggestions">
           <button v-for="s in suggestions" :key="s" @click="sendSuggestion(s)" class="suggestion-btn">
             {{ s }}
@@ -33,7 +33,7 @@
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1H2a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2z"/><circle cx="9" cy="13" r="1" fill="currentColor"/><circle cx="15" cy="13" r="1" fill="currentColor"/><path d="M9 17h6"/></svg>
         </div>
         <div class="msg-content">
-          <pre class="msg-text">{{ msg.text }}</pre>
+          <div class="msg-text" v-html="formatMessage(msg.text)"></div>
           <span class="msg-time">{{ msg.time }}</span>
         </div>
       </div>
@@ -79,13 +79,20 @@ const messagesContainer = ref(null)
 
 const suggestions = [
   'Lihat laporan terbaru',
-  'Laporkan dompet hilang di Gedung A, pelapor Budi',
+  'Laporkan dompet hilang di Gedung A',
   'Cari barang elektronik yang ditemukan',
   'Cocokkan barang hilang dan ditemukan',
 ]
 
 function getTime() {
   return new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
+}
+
+function formatMessage(text) {
+  if (!text) return ''
+  return text
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\n/g, '<br>')
 }
 
 async function scrollToBottom() {
@@ -110,7 +117,16 @@ async function sendMessage() {
   await scrollToBottom()
 
   try {
-    const res = await api.post('/api/ai/chat', { message: text })
+    // Kirim riwayat chat untuk konteks percakapan
+    const chatHistory = messages.value.slice(-8).map(m => ({
+      role: m.role,
+      text: m.text
+    }))
+
+    const res = await api.post('/api/ai/chat', {
+      message: text,
+      history: chatHistory
+    })
     messages.value.push({
       role: 'ai',
       text: res.data.response,
@@ -118,9 +134,10 @@ async function sendMessage() {
     })
     emit('data-changed', res.data.tools_used)
   } catch (err) {
+    console.error('Chat error:', err)
     messages.value.push({
       role: 'ai',
-      text: 'Error connecting to backend.',
+      text: 'Maaf, terjadi kesalahan koneksi. Silakan coba lagi.',
       time: getTime(),
     })
   } finally {
@@ -133,7 +150,12 @@ const sendMessageExt = async (text) => {
   input.value = text;
   await sendMessage();
 };
-defineExpose({ sendMessageExt });
+
+const setInputOnly = (text) => {
+  input.value = text;
+};
+
+defineExpose({ sendMessageExt, setInputOnly });
 </script>
 
 <style scoped>
@@ -337,6 +359,17 @@ defineExpose({ sendMessageExt });
   word-wrap: break-word;
   font-family: inherit;
   border-radius: var(--radius-md);
+}
+
+.msg-text strong {
+  font-weight: 600;
+  color: var(--color-text-main);
+}
+
+.msg-text br {
+  display: block;
+  content: '';
+  margin: 4px 0;
 }
 
 .chat-msg.user .msg-text {

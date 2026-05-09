@@ -20,7 +20,7 @@ jobs:
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.SSH_KEY }}
           script: |
-            cd ~/projectpabw  
+            cd ~/apps/projectpabw  
             git checkout vps-izanagi
             git pull origin vps-izanagi
             docker compose up -d --build

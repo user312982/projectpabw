@@ -10,36 +10,42 @@
         <div class="form-group">
           <label>Username</label>
           <input type="text" v-model="loginForm.username" required />
+          <span class="field-error" v-if="errors.username">{{ errors.username }}</span>
         </div>
         <div class="form-group">
           <label>Password</label>
           <input type="password" v-model="loginForm.password" required />
+          <span class="field-error" v-if="errors.password">{{ errors.password }}</span>
         </div>
         <button type="submit" class="btn btn-primary" :disabled="loading">Login</button>
-        <p class="toggle-text">Belum punya akun? <a href="#" @click.prevent="isRegister = true">Daftar</a></p>
-        <p class="error" v-if="error">{{ error }}</p>
+        <p class="toggle-text">Belum punya akun? <a href="#" @click.prevent="isRegister = true; clearErrors()">Daftar</a></p>
+        <p class="error" v-if="generalError">{{ generalError }}</p>
       </form>
 
       <form @submit.prevent="handleRegister" class="auth-form" v-else>
         <div class="form-group">
           <label>Username</label>
           <input type="text" v-model="registerForm.username" required />
+          <span class="field-error" v-if="errors.username">{{ errors.username }}</span>
         </div>
         <div class="form-group">
           <label>Password</label>
           <input type="password" v-model="registerForm.password" required />
+          <span class="field-error" v-if="errors.password">{{ errors.password }}</span>
         </div>
         <div class="form-group">
           <label>Nama Lengkap</label>
           <input type="text" v-model="registerForm.full_name" required />
+          <span class="field-error" v-if="errors.full_name">{{ errors.full_name }}</span>
         </div>
         <div class="form-group">
           <label>NIM (Opsional)</label>
           <input type="text" v-model="registerForm.nim" />
+          <span class="field-error" v-if="errors.nim">{{ errors.nim }}</span>
         </div>
         <button type="submit" class="btn btn-primary" :disabled="loading">Daftar</button>
-        <p class="toggle-text">Sudah punya akun? <a href="#" @click.prevent="isRegister = false">Login</a></p>
-        <p class="error" v-if="error">{{ error }}</p>
+        <p class="toggle-text">Sudah punya akun? <a href="#" @click.prevent="isRegister = false; clearErrors()">Login</a></p>
+        <p class="error" v-if="generalError">{{ generalError }}</p>
       </form>
     </div>
   </div>
@@ -53,11 +59,37 @@ const emit = defineEmits(['auth-success'])
 
 const isRegister = ref(false)
 const loading = ref(false)
-const error = ref('')
+const generalError = ref('')
+const errors = ref({})
 
 const loginForm = ref({ username: '', password: '' })
 const registerForm = ref({ username: '', password: '', full_name: '', nim: '' })
 let abortController = null
+
+function clearErrors() {
+  errors.value = {}
+  generalError.value = ''
+}
+
+function handleApiError(err) {
+  clearErrors()
+  if (err.code === 'ERR_CANCELED' || err.name === 'CanceledError') return
+  console.error(err)
+  
+  const detail = err.response?.data?.detail
+  if (Array.isArray(detail)) {
+    detail.forEach(d => {
+      const field = d.loc && d.loc.length > 0 ? d.loc[d.loc.length - 1] : null
+      if (field && field !== 'body') {
+        errors.value[field] = d.msg
+      } else {
+        generalError.value = d.msg
+      }
+    })
+  } else {
+    generalError.value = detail || err.message || 'Terjadi kesalahan'
+  }
+}
 
 async function handleLogin() {
   if (abortController) abortController.abort()
@@ -65,7 +97,7 @@ async function handleLogin() {
   const timeoutId = setTimeout(() => abortController.abort(), 10000)
   
   loading.value = true
-  error.value = ''
+  clearErrors()
   try {
     const formData = new URLSearchParams()
     formData.append('username', loginForm.value.username)
@@ -83,9 +115,7 @@ async function handleLogin() {
     emit('auth-success', res.data.user)
   } catch (err) {
     clearTimeout(timeoutId)
-    if (err.code === 'ERR_CANCELED' || err.name === 'CanceledError') return
-    console.error(err)
-    error.value = err.response?.data?.detail || err.message || 'Gagal login'
+    handleApiError(err)
   } finally {
     loading.value = false
     abortController = null
@@ -98,7 +128,7 @@ async function handleRegister() {
   const timeoutId = setTimeout(() => abortController.abort(), 10000)
   
   loading.value = true
-  error.value = ''
+  clearErrors()
   try {
     const res = await api.post('/api/auth/register', registerForm.value, {
       signal: abortController.signal
@@ -111,9 +141,7 @@ async function handleRegister() {
     emit('auth-success', res.data.user)
   } catch (err) {
     clearTimeout(timeoutId)
-    if (err.code === 'ERR_CANCELED' || err.name === 'CanceledError') return
-    console.error(err)
-    error.value = err.response?.data?.detail || err.message || 'Gagal daftar'
+    handleApiError(err)
   } finally {
     loading.value = false
     abortController = null
@@ -208,5 +236,10 @@ async function handleRegister() {
   text-align: center;
   font-size: 14px;
   font-weight: 500;
+}
+.field-error {
+  color: #ef4444;
+  font-size: 12px;
+  margin-top: -4px;
 }
 </style>

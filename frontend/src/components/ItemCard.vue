@@ -211,6 +211,7 @@ function capitalize(str) {
 
 const relativeTime = computed(() => {
   if (!props.item.created_at) return '-'
+  const now = new Date()
   const dateStr = props.item.created_at
   const then = new Date(dateStr.endsWith('Z') || dateStr.includes('+') ? dateStr : dateStr + 'Z')
   const diff = Math.floor((now - then) / 1000)

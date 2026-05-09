@@ -140,7 +140,7 @@ class KlaimBarang(Base):
     item_id = Column(Integer, ForeignKey("items.id"), nullable=False)
     nama_pengklaim = Column(String(255), nullable=False)
     nim_pengklaim = Column(String(20), nullable=False)
-    kontak_pengklaim = Column(String(255), nullable=False)
+    kontak_pengklaim = Column(String(255), nullable=True)
     tanggal_klaim = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     petugas_id = Column(Integer, ForeignKey("users.id"), nullable=False)
 
@@ -190,6 +190,8 @@ def init_db():
     _migrate_reporter_name_nullable()
     # Migration: add is_active, last_login to users
     _migrate_user_new_columns()
+    # Migration: make kontak_pengklaim nullable
+    _migrate_kontak_nullable()
 
 
 def _migrate_reporter_name_nullable():
@@ -251,6 +253,35 @@ def get_db():
         yield db
     finally:
         db.close()
+
+
+def _migrate_kontak_nullable():
+    """Ensure kontak_pengklaim column on klaim_barang table is nullable."""
+    from sqlalchemy import inspect, text
+
+    inspector = inspect(engine)
+    if "klaim_barang" not in inspector.get_table_names():
+        return
+    columns = {col["name"]: col for col in inspector.get_columns("klaim_barang")}
+    if "kontak_pengklaim" in columns and not columns["kontak_pengklaim"]["nullable"]:
+        with engine.begin() as conn:
+            conn.execute(text("PRAGMA foreign_keys=OFF"))
+            conn.execute(text(
+                "CREATE TABLE klaim_barang_new ("
+                "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+                "item_id INTEGER NOT NULL, "
+                "nama_pengklaim VARCHAR(255) NOT NULL, "
+                "nim_pengklaim VARCHAR(20) NOT NULL, "
+                "kontak_pengklaim VARCHAR(255), "
+                "tanggal_klaim DATETIME, "
+                "petugas_id INTEGER NOT NULL, "
+                "FOREIGN KEY(item_id) REFERENCES items(id), "
+                "FOREIGN KEY(petugas_id) REFERENCES users(id))"
+            ))
+            conn.execute(text("INSERT INTO klaim_barang_new SELECT * FROM klaim_barang"))
+            conn.execute(text("DROP TABLE klaim_barang"))
+            conn.execute(text("ALTER TABLE klaim_barang_new RENAME TO klaim_barang"))
+            conn.execute(text("PRAGMA foreign_keys=ON"))
 
 
 def generate_unique_code(db):

@@ -4,14 +4,14 @@
       <div class="form-icon">
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
       </div>
-      <h3>Lapor Barang</h3>
-      <p>Isi form di bawah untuk melaporkan barang hilang atau ditemukan</p>
+      <h3>Report Item</h3>
+      <p>Fill out the form below to report a lost or found item</p>
     </div>
 
     <form @submit.prevent="submitForm" class="report-form">
       <!-- Type Selection -->
       <div class="form-group">
-        <label class="form-label">Tipe Laporan</label>
+        <label class="form-label">Report Type</label>
         <div class="type-selector">
           <button
             type="button"
@@ -20,7 +20,7 @@
             @click="form.type = 'lost'"
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
-            Barang Hilang
+            Lost Item
           </button>
           <button
             type="button"
@@ -29,18 +29,18 @@
             @click="form.type = 'found'"
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-            Barang Ditemukan
+            Found Item
           </button>
         </div>
       </div>
 
       <!-- Title -->
       <div class="form-group">
-        <label class="form-label">Nama Barang *</label>
+        <label class="form-label">Item Name *</label>
         <input
           v-model="form.title"
           type="text"
-          placeholder="contoh: Dompet Hitam Kulit"
+          placeholder="e.g. Black Leather Wallet"
           class="form-input"
           required
         />
@@ -48,7 +48,7 @@
 
       <!-- Category -->
       <div class="form-group">
-        <label class="form-label">Kategori</label>
+        <label class="form-label">Category</label>
         <select v-model="form.category" class="form-input">
           <option v-for="c in categories" :key="c.value" :value="c.value">
             {{ c.label }}
@@ -60,10 +60,10 @@
       <div class="form-row">
         <!-- Description -->
         <div class="form-group form-group-full">
-          <label class="form-label">Deskripsi</label>
+          <label class="form-label">Description</label>
           <textarea
             v-model="form.description"
-            placeholder="Ciri-ciri barang, warna, merek, dll..."
+            placeholder="Item description, color, brand, etc..."
             class="form-input form-textarea"
             rows="3"
           ></textarea>
@@ -73,16 +73,16 @@
       <!-- Location & Date -->
       <div class="form-row">
         <div class="form-group">
-          <label class="form-label">Lokasi</label>
+          <label class="form-label">Location</label>
           <input
             v-model="form.location"
             type="text"
-            placeholder="contoh: Gedung A Lantai 2"
+            placeholder="e.g. Building A, 2nd Floor"
             class="form-input"
           />
         </div>
         <div class="form-group">
-          <label class="form-label">Tanggal Kejadian</label>
+          <label class="form-label">Date of Incident</label>
           <input
             v-model="form.date_event"
             type="date"
@@ -94,20 +94,20 @@
       <!-- Reporter Info -->
       <div class="form-row">
         <div class="form-group">
-          <label class="form-label">Nama Pelapor</label>
+          <label class="form-label">Reporter Name</label>
           <input
             v-model="form.reporter_name"
             type="text"
-            placeholder="Nama lengkap (opsional)"
+            placeholder="Full name (optional)"
             class="form-input"
           />
         </div>
         <div class="form-group">
-          <label class="form-label">Kontak Pelapor</label>
+          <label class="form-label">Reporter Contact</label>
           <input
             v-model="form.reporter_contact"
             type="text"
-            placeholder="No. HP / Email / LINE ID"
+            placeholder="Phone / Email / LINE ID"
             class="form-input"
           />
         </div>
@@ -119,10 +119,10 @@
         class="submit-btn"
         :disabled="submitting || !form.title"
       >
-        <span v-if="!submitting">Kirim Laporan</span>
+        <span v-if="!submitting">Submit Report</span>
         <span v-else class="btn-loading">
           <span class="spinner"></span>
-          Mengirim...
+          Submitting...
         </span>
       </button>
 
@@ -143,13 +143,13 @@ import api from '../services/api.js'
 const emit = defineEmits(['submitted'])
 
 const categories = [
-  { label: 'Elektronik', value: 'elektronik' },
-  { label: 'Pakaian', value: 'pakaian' },
-  { label: 'Dokumen', value: 'dokumen' },
-  { label: 'Aksesoris', value: 'aksesoris' },
-  { label: 'Tas', value: 'tas' },
-  { label: 'Kunci', value: 'kunci' },
-  { label: 'Lainnya', value: 'lainnya' },
+  { label: 'Electronics', value: 'elektronik' },
+  { label: 'Clothing', value: 'pakaian' },
+  { label: 'Documents', value: 'dokumen' },
+  { label: 'Accessories', value: 'aksesoris' },
+  { label: 'Bags', value: 'tas' },
+  { label: 'Keys', value: 'kunci' },
+  { label: 'Others', value: 'lainnya' },
 ]
 
 const form = reactive({
@@ -180,7 +180,7 @@ async function submitForm() {
       reporter_name: form.reporter_name || null,
     })
 
-    statusMessage.value = 'Laporan berhasil dikirim!'
+    statusMessage.value = 'Report submitted successfully!'
     statusType.value = 'success'
 
     // Reset form
@@ -194,7 +194,7 @@ async function submitForm() {
 
     emit('submitted')
   } catch (err) {
-    statusMessage.value = 'Gagal mengirim laporan. Coba lagi.'
+    statusMessage.value = 'Failed to submit report. Please try again.'
     statusType.value = 'error'
     console.error(err)
   } finally {
@@ -303,7 +303,7 @@ async function submitForm() {
 
 .form-input:focus {
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 4px rgba(16,185,129,0.1);
+  box-shadow: 0 0 0 4px rgba(84, 107, 65, 0.1);
   background: var(--color-surface);
 }
 
@@ -341,16 +341,16 @@ async function submitForm() {
 
 .type-btn.active.lost {
   background: var(--gradient-lost);
-  color: var(--color-on-primary);
-  border-color: transparent;
-  box-shadow: 0 4px 16px rgba(239,68,68,0.25);
+  color: var(--color-text-main);
+  border-color: rgba(84, 107, 65, 0.3);
+  box-shadow: 0 4px 16px rgba(84, 107, 65, 0.15);
 }
 
 .type-btn.active.found {
   background: var(--gradient-found);
-  color: var(--color-on-primary);
-  border-color: transparent;
-  box-shadow: 0 4px 16px rgba(16,185,129,0.25);
+  color: var(--color-text-main);
+  border-color: rgba(153, 173, 122, 0.4);
+  box-shadow: 0 4px 16px rgba(153, 173, 122, 0.2);
 }
 
 .submit-btn {

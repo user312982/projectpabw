@@ -32,13 +32,13 @@
   --color-light-gray: #E8DFC8;
 
   /* Gradients */
-  --gradient-primary: var(--color-primary);
-  --gradient-lost: rgba(84, 107, 65, 0.08);
-  --gradient-found: rgba(84, 107, 65, 0.08);
-  --gradient-accent: var(--color-surface-hover);
-  --gradient-dark: var(--color-primary);
-  --gradient-warm: rgba(153, 173, 122, 0.15);
-  --gradient-glass: transparent;
+  --gradient-primary: linear-gradient(135deg, #546B41 0%, #3d4f2f 100%);
+  --gradient-lost: linear-gradient(135deg, rgba(84, 107, 65, 0.15) 0%, rgba(84, 107, 65, 0.08) 100%);
+  --gradient-found: linear-gradient(135deg, rgba(153, 173, 122, 0.25) 0%, rgba(153, 173, 122, 0.12) 100%);
+  --gradient-accent: linear-gradient(135deg, #99AD7A 0%, #7a8f5f 100%);
+  --gradient-dark: linear-gradient(135deg, #3d4f2f 0%, #546B41 100%);
+  --gradient-warm: linear-gradient(135deg, rgba(220, 204, 172, 0.4) 0%, rgba(220, 204, 172, 0.2) 100%);
+  --gradient-glass: rgba(255, 248, 236, 0.85);
 
   /* Typography */
   --font-main: 'Inter', system-ui, -apple-system, sans-serif;

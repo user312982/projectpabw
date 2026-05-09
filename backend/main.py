@@ -253,14 +253,14 @@ class StatusUpdate(BaseModel):
 class KlaimCreate(BaseModel):
     nama_pengklaim: str
     nim_pengklaim: str
-    kontak_pengklaim: str
+    kontak_pengklaim: Optional[str] = None
 
 
 class ClaimByCodeRequest(BaseModel):
     unique_code: str
     nama_pengklaim: str
     nim_pengklaim: str
-    kontak_pengklaim: str
+    kontak_pengklaim: Optional[str] = None
 
 
 class ChatMessage(BaseModel):
@@ -525,6 +525,15 @@ def get_items(
 
     items = query.limit(100).all()
     return [item.to_dict() for item in items]
+
+
+@app.get("/api/items/by-code/{unique_code}")
+def get_item_by_code(unique_code: str, db: Session = Depends(get_db)):
+    """Get a single item by unique code."""
+    item = db.query(Item).filter(Item.unique_code == unique_code.upper()).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="Item tidak ditemukan")
+    return item.to_dict()
 
 
 @app.get("/api/items/{item_id}")

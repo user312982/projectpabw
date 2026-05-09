@@ -7,7 +7,7 @@
         <input
           v-model="searchQuery"
           type="text"
-          placeholder="Cari barang..."
+          placeholder="Search items..."
           class="search-input"
         />
       </div>
@@ -37,8 +37,8 @@
           <line x1="14" y1="8" x2="8" y2="14"/>
         </svg>
       </div>
-      <h3 class="empty-title">Tidak Ada Data</h3>
-      <p>Belum ada laporan barang.</p>
+      <h3 class="empty-title">No Items Found</h3>
+      <p>No items have been reported yet.</p>
     </div>
   </div>
 </template>
@@ -109,30 +109,30 @@ const filteredItems = computed(() => {
   left: 16px;
   top: 50%;
   transform: translateY(-50%);
-  color: #99AD7A;
+  color: var(--color-text-muted);
   pointer-events: none;
 }
 
 .search-input {
   width: 100%;
   padding: 10px 20px 10px 40px;
-  border: 2px solid #DCCCAC;
+  border: 2px solid var(--color-border);
   border-radius: var(--radius-pill);
   background: rgba(255, 248, 236, 0.6);
   font-size: 14px;
   font-weight: var(--font-weight-medium);
-  color: #546B41;
+  color: var(--color-text-main);
   outline: none;
   transition: all 0.25s ease;
 }
 
 .search-input:focus {
-  border-color: #99AD7A;
-  background: #FFF8EC;
+  border-color: var(--color-primary);
+  background: var(--color-surface);
 }
 
 .search-input::placeholder {
-  color: #99AD7A;
+  color: var(--color-text-muted);
 }
 
 .items-grid {
@@ -155,7 +155,7 @@ const filteredItems = computed(() => {
   height: 120px;
   border-radius: 50%;
   background: rgba(84, 107, 65, 0.08);
-  color: #99AD7A;
+  color: var(--color-text-muted);
   margin-bottom: 24px;
   animation: float 3s ease-in-out infinite;
 }
@@ -164,7 +164,7 @@ const filteredItems = computed(() => {
   font-size: 28px;
   letter-spacing: -0.02em;
   margin: 0 0 8px 0;
-  color: #546B41;
+  color: var(--color-text-main);
   opacity: 0.9;
 }
 
@@ -172,7 +172,7 @@ const filteredItems = computed(() => {
   font-size: 16px;
   font-weight: var(--font-weight-medium);
   opacity: 0.7;
-  color: #99AD7A;
+  color: var(--color-text-muted);
 }
 
 @media (max-width: 768px) {

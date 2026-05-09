@@ -39,7 +39,7 @@
         <!-- Footer Card -->
         <div class="bento-card footer-card">
           <button class="logout-link" @click="$emit('logout')">Logout</button>
-          <span class="version-badge">v1.0 — Petugas</span>
+          <span class="version-badge">v1.0 — Staff</span>
         </div>
       </div>
     </aside>
@@ -58,7 +58,6 @@
             <p class="header-subtitle">{{ currentNav.subtitle }}</p>
           </div>
           <div class="header-actions">
-            <button class="btn-claim" @click="showClaimModal = true">Klaim By Kode</button>
             <div class="header-date">
               {{ todayDate }}
             </div>
@@ -66,68 +65,63 @@
         </header>
 
         <!-- Content Area -->
-        <div class="content-grid">
-          <!-- Left: Page Content -->
-          <div class="content-left">
+        <div class="content-full">
+          <!-- Dashboard Page -->
+          <template v-if="currentPage === 'dashboard'">
+            <DashboardCards :data="dashboardData" />
+            <ItemList :items="allItems" :user="user" @code-copied="code => $emit('code-copied', code)" @updated="refreshAllData" />
+          </template>
 
-            <!-- Dashboard Page -->
-            <template v-if="currentPage === 'dashboard'">
-              <DashboardCards :data="dashboardData" />
-              <ItemList :items="allItems" :user="user" @code-copied="code => $emit('code-copied', code)" @updated="refreshAllData" />
-            </template>
+          <!-- Items Page with Tabs -->
+          <template v-if="currentPage === 'items'">
+            <div class="items-tabs">
+              <button
+                v-for="tab in itemTabs"
+                :key="tab.value"
+                class="tab-btn"
+                :class="{ active: itemTab === tab.value }"
+                @click="itemTab = tab.value"
+              >
+                {{ tab.label }}
+              </button>
+            </div>
+            <ItemList :items="filteredItems" :user="user" @code-copied="code => $emit('code-copied', code)" @updated="refreshAllData" />
+          </template>
 
-            <!-- Lost Page -->
-            <template v-if="currentPage === 'lost'">
-              <ItemList :items="lostItems" :user="user" @updated="refreshAllData" />
-            </template>
+          <!-- Claimed Page -->
+          <template v-if="currentPage === 'claimed'">
+            <ItemList :items="claimedItems" :user="user" @updated="refreshAllData" />
+          </template>
 
-            <!-- Found Page -->
-            <template v-if="currentPage === 'found'">
-              <ItemList :items="foundItems" :user="user" @updated="refreshAllData" />
-            </template>
+          <!-- Claim Item Page -->
+          <template v-if="currentPage === 'claim'">
+            <ClaimItemView @claimed="refreshAllData" />
+          </template>
 
-            <!-- Report Page -->
-            <template v-if="currentPage === 'report'">
-              <ReportForm @submitted="refreshAllData" />
-            </template>
+          <!-- Claim History Page -->
+          <template v-if="currentPage === 'history'">
+            <ClaimHistory ref="claimHistoryRef" />
+          </template>
 
-          </div>
-
-          <!-- Right: AI Chat -->
-          <div class="content-right">
-            <AiChat @data-changed="refreshAllData" />
-          </div>
+          <!-- Report Page -->
+          <template v-if="currentPage === 'report'">
+            <ReportForm @submitted="refreshAllData" />
+          </template>
         </div>
 
       </div>
     </main>
-
-    <!-- Modal Klaim -->
-    <div class="modal-overlay" v-if="showClaimModal" @click="showClaimModal = false">
-      <div class="modal-content bento-card" @click.stop>
-        <h3>Input Kode Klaim</h3>
-        <form @submit.prevent="submitClaim" class="claim-form">
-           <input type="text" v-model="claimForm.unique_code" placeholder="Kode Unik (e.g. LF-ABC12)" required />
-           <input type="text" v-model="claimForm.nama_pengklaim" placeholder="Nama Pengambil" required />
-           <input type="text" v-model="claimForm.nim_pengklaim" placeholder="NIM / NIP Pengambil" required />
-           <input type="text" v-model="claimForm.kontak_pengklaim" placeholder="Kontak (No HP / Email)" required />
-           <button type="submit" class="btn-primary">Proses Klaim</button>
-           <p class="success" v-if="claimSuccess">{{claimSuccess}}</p>
-           <p class="error" v-if="claimError">{{claimError}}</p>
-        </form>
-      </div>
-    </div>
-
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import api from '../services/api.js'
-import AiChat from './AiChat.vue'
 import DashboardCards from './DashboardCards.vue'
 import ItemList from './ItemList.vue'
 import ReportForm from './ReportForm.vue'
+import ClaimItemView from './ClaimItemView.vue'
+import ClaimHistory from './ClaimHistory.vue'
 
 const props = defineProps({
   user: {
@@ -138,19 +132,24 @@ const props = defineProps({
 
 const currentPage = ref('dashboard')
 const mobileOpen = ref(false)
+const claimHistoryRef = ref(null)
 
 const navItems = [
   { id: 'dashboard', label: 'Dashboard', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>' },
-  { id: 'lost', label: 'Hilang', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="11" x2="14" y2="11"/></svg>' },
-  { id: 'found', label: 'Ditemukan', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>' },
-  { id: 'report', label: 'Lapor', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>' },
+  { id: 'items', label: 'Items', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7h-9"/><path d="M14 17H5"/><circle cx="17" cy="17" r="3"/><circle cx="7" cy="7" r="3"/></svg>' },
+  { id: 'claimed', label: 'Claimed', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>' },
+  { id: 'claim', label: 'Claim Item', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>' },
+  { id: 'history', label: 'History', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>' },
+  { id: 'report', label: 'Report', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>' },
 ]
 
 const navConfig = {
-  dashboard: { title: 'Dashboard', subtitle: 'Ringkasan laporan barang hilang & ditemukan', bg: 'bg-primary' },
-  lost: { title: 'Barang Hilang', subtitle: 'Daftar laporan barang yang hilang', bg: 'bg-lost' },
-  found: { title: 'Ditemukan', subtitle: 'Daftar laporan barang yang ditemukan', bg: 'bg-found' },
-  report: { title: 'Lapor', subtitle: 'Buat laporan barang hilang atau ditemukan', bg: 'bg-accent' },
+  dashboard: { title: 'Dashboard', subtitle: 'Overview of lost & found reports', bg: 'bg-primary' },
+  items: { title: 'All Items', subtitle: 'Lost & Found items by category', bg: 'bg-primary' },
+  claimed: { title: 'Claimed Items', subtitle: 'Items that have been picked up', bg: 'bg-claimed' },
+  claim: { title: 'Claim Item', subtitle: 'Process item pickup confirmation', bg: 'bg-accent' },
+  history: { title: 'Claim History', subtitle: 'Record of all processed claims', bg: 'bg-primary' },
+  report: { title: 'Report', subtitle: 'Create a lost or found item report', bg: 'bg-accent' },
 }
 
 const currentNav = computed(() => navConfig[currentPage.value])
@@ -167,31 +166,24 @@ const dashboardData = ref({
 const allItems = ref([])
 const lostItems = computed(() => allItems.value.filter(i => i.type === 'lost'))
 const foundItems = computed(() => allItems.value.filter(i => i.type === 'found'))
+const claimedItems = computed(() => allItems.value.filter(i => i.status === 'claimed' || i.status === 'closed'))
+
+const itemTab = ref('all')
+const itemTabs = [
+  { value: 'all', label: 'All' },
+  { value: 'lost', label: 'Lost' },
+  { value: 'found', label: 'Found' },
+]
+const filteredItems = computed(() => {
+  if (itemTab.value === 'all') return allItems.value
+  if (itemTab.value === 'lost') return lostItems.value
+  if (itemTab.value === 'found') return foundItems.value
+  return allItems.value
+})
 
 const emit = defineEmits(['logout'])
 
-const showClaimModal = ref(false)
-const claimForm = ref({ unique_code: '', nama_pengklaim: '', nim_pengklaim: '', kontak_pengklaim: '' })
-const claimError = ref('')
-const claimSuccess = ref('')
-
-async function submitClaim() {
-  claimError.value = ''
-  claimSuccess.value = ''
-  try {
-    await api.post('/api/items/claim-by-code', claimForm.value)
-    claimSuccess.value = 'Barang berhasil diklaim!'
-    setTimeout(() => { 
-      showClaimModal.value = false;
-      claimForm.value = { unique_code: '', nama_pengklaim: '', nim_pengklaim: '', kontak_pengklaim: '' }
-    }, 2000)
-    refreshAllData()
-  } catch (err) {
-    claimError.value = err.response?.data?.detail || 'Gagal klaim'
-  }
-}
-
-const todayDate = new Date().toLocaleDateString('id-ID', {
+const todayDate = new Date().toLocaleDateString('en-US', {
   weekday: 'long',
   year: 'numeric',
   month: 'long',
@@ -218,6 +210,9 @@ async function fetchItems() {
 
 async function refreshAllData() {
   await Promise.all([fetchDashboard(), fetchItems()])
+  if (claimHistoryRef.value) {
+    claimHistoryRef.value.refresh()
+  }
 }
 
 onMounted(() => {
@@ -244,9 +239,8 @@ onMounted(() => {
   right: 0;
   z-index: 100;
   padding: 12px 20px;
-  background: rgba(14,14,14,0.95);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
   align-items: center;
   justify-content: space-between;
 }
@@ -260,14 +254,14 @@ onMounted(() => {
 .brand-itk {
   font-size: 20px;
   font-weight: 900;
-  color: var(--color-on-primary);
+  color: var(--color-primary);
   letter-spacing: -0.04em;
 }
 
 .brand-lf {
   font-size: 20px;
   font-weight: 900;
-  color: var(--color-primary);
+  color: var(--color-text-muted);
   letter-spacing: -0.04em;
 }
 
@@ -289,7 +283,7 @@ onMounted(() => {
   display: block;
   width: 22px;
   height: 2px;
-  background: var(--color-surface);
+  background: var(--color-primary);
   border-radius: 2px;
   transition: all 0.3s ease;
 }
@@ -307,26 +301,28 @@ onMounted(() => {
 /* ── Sidebar ────────────────────────── */
 
 .sidebar-wrapper {
-  width: 150px;
+  width: 160px;
   flex-shrink: 0;
 }
 
 .sidebar {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
   height: 100%;
 }
 
 .bento-card {
   background: var(--color-surface);
   border-radius: var(--radius-lg);
-  padding: 24px 16px;
+  padding: 20px 14px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   text-align: center;
+  border: 2px solid var(--color-border);
+  box-shadow: 0 4px 16px rgba(84, 107, 65, 0.1);
 }
 
 .brand-card {
@@ -344,7 +340,7 @@ onMounted(() => {
   left: -50%;
   width: 200%;
   height: 200%;
-  background: radial-gradient(circle at 30% 30%, rgba(16,185,129,0.15) 0%, transparent 60%);
+  background: radial-gradient(circle at 30% 30%, rgba(153,173,122,0.2) 0%, transparent 60%);
   pointer-events: none;
 }
 
@@ -358,27 +354,27 @@ onMounted(() => {
 }
 
 .brand-text {
-  color: var(--color-primary);
+  color: #99AD7A;
   margin-top: -2px !important;
 }
 
 .nav-card {
   flex: 1;
   justify-content: flex-start;
-  padding: 16px;
-  gap: 4px;
+  padding: 12px;
+  gap: 2px;
 }
 
 .nav-item {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
-  padding: 14px 12px;
+  gap: 4px;
+  padding: 10px 8px;
   border-radius: var(--radius-md);
   color: var(--color-text-main);
   text-decoration: none;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: var(--font-weight-bold);
   width: 100%;
   transition: all 0.25s ease;
@@ -444,12 +440,32 @@ onMounted(() => {
   border-radius: var(--radius-xl);
   overflow: hidden;
   transition: background 0.5s ease;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
 }
 
-.bg-primary { background: var(--gradient-primary); color: var(--color-on-primary); }
-.bg-lost { background: var(--gradient-lost); color: var(--color-on-primary); }
-.bg-found { background: var(--gradient-found); color: var(--color-on-primary); }
-.bg-accent { background: var(--gradient-accent); color: var(--color-on-primary); }
+.bg-primary { 
+  background: linear-gradient(135deg, #FFF8EC 0%, #F5EFE1 100%); 
+  color: var(--color-primary); 
+}
+.bg-lost { 
+  background: linear-gradient(135deg, #FFF8EC 0%, #F5EFE1 100%); 
+  color: var(--color-text-main);
+  border: 1px solid rgba(84, 107, 65, 0.1);
+}
+.bg-found { 
+  background: linear-gradient(135deg, #FFF8EC 0%, #F5EFE1 100%); 
+  color: var(--color-text-main);
+  border: 1px solid rgba(84, 107, 65, 0.1);
+}
+.bg-claimed { 
+  background: linear-gradient(135deg, #F9F1E6 0%, #EFE5D9 100%); 
+  color: var(--color-text-main);
+  border: 1px solid rgba(220, 204, 172, 0.3);
+}
+.bg-accent { 
+  background: linear-gradient(135deg, #F0F4EC 0%, #E2ECD8 100%); 
+  color: var(--color-primary); 
+}
 
 .main-header {
   display: flex;
@@ -471,7 +487,8 @@ onMounted(() => {
   font-size: 16px;
   font-weight: var(--font-weight-medium);
   margin-top: 16px;
-  opacity: 0.9;
+  opacity: 0.95;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 .header-date {
@@ -480,20 +497,15 @@ onMounted(() => {
   text-transform: uppercase;
   letter-spacing: 0.02em;
   padding: 8px 16px;
-  border: 1px solid rgba(255,255,255,0.3);
+  border: 1px solid rgba(84, 107, 65, 0.2);
   border-radius: var(--radius-pill);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  background: rgba(255,255,255,0.1);
+  background: rgba(84, 107, 65, 0.05);
+  color: var(--color-primary);
 }
 
-.content-grid {
-  display: flex;
-  flex: 1;
-  min-height: 500px;
-}
-
-.content-left {
+.content-full {
   flex: 1;
   padding: 24px 64px 64px;
   display: flex;
@@ -501,15 +513,65 @@ onMounted(() => {
   gap: 40px;
   overflow-y: auto;
   animation: fadeIn 0.4s ease;
+  background: rgba(255, 255, 255, 0.4);
+  backdrop-filter: blur(8px);
+  border-top-left-radius: 32px;
+  border-top: 1px solid rgba(255, 255, 255, 0.8);
+  border-left: 1px solid rgba(255, 255, 255, 0.8);
+  box-shadow: -8px -8px 24px rgba(0,0,0,0.02);
 }
 
-.content-right {
-  width: 400px;
-  padding: 0 40px 40px 0;
-  flex-shrink: 0;
+.header-actions {
   display: flex;
-  flex-direction: column;
-  height: 100%;
+  align-items: center;
+  gap: 16px;
+}
+
+.logout-link {
+  background: none;
+  border: none;
+  color: #ef4444;
+  font-weight: bold;
+  cursor: pointer;
+  padding: 8px;
+  margin-bottom: 8px;
+  text-decoration: underline;
+}
+
+/* ── Items Tabs ─────────────────────── */
+
+.items-tabs {
+  display: flex;
+  gap: 8px;
+  padding: 4px;
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  width: fit-content;
+  border: 2px solid var(--color-border);
+  box-shadow: 0 4px 12px rgba(84, 107, 65, 0.1);
+}
+
+.tab-btn {
+  padding: 10px 20px;
+  border: none;
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: 14px;
+  font-weight: var(--font-weight-medium);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.tab-btn:hover {
+  color: var(--color-text-main);
+  background: rgba(220, 204, 172, 0.3);
+}
+
+.tab-btn.active {
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  box-shadow: 0 4px 12px rgba(84, 107, 65, 0.25);
 }
 
 /* ── Mobile Overlay ────────────────── */
@@ -521,7 +583,7 @@ onMounted(() => {
 /* ── Responsive ─────────────────────── */
 
 @media (max-width: 1200px) {
-  .main-header, .content-left {
+  .main-header, .content-full {
     padding-left: 40px;
     padding-right: 40px;
   }
@@ -575,102 +637,12 @@ onMounted(() => {
     border-radius: 0;
   }
 
-  .content-grid {
-    flex-direction: column;
-  }
-
-  .content-right {
-    width: 100%;
-    padding: 0 20px 40px;
-    height: auto;
-  }
-
   .main-header {
     padding: 32px 20px 20px;
   }
 
-  .content-left {
+  .content-full {
     padding: 20px;
   }
 }
-
-.header-actions {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.btn-claim {
-  padding: 10px 16px;
-  border-radius: var(--radius-pill);
-  border: 1px solid rgba(255,255,255,0.4);
-  background: var(--color-primary);
-  color: white;
-  font-weight: bold;
-  cursor: pointer;
-  box-shadow: 0 4px 10px rgba(16,185,129,0.3);
-  transition: transform 0.2s;
-}
-
-.btn-claim:hover {
-  transform: scale(1.05);
-}
-
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.6);
-  backdrop-filter: blur(4px);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-  padding: 20px;
-}
-
-.modal-content {
-  background: var(--color-surface);
-  padding: 32px;
-  border-radius: 20px;
-  max-width: 400px;
-  width: 100%;
-}
-.modal-content h3 { margin-top: 0; }
-
-.claim-form {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  margin-top: 16px;
-}
-
-.claim-form input {
-  padding: 12px;
-  border-radius: 8px;
-  border: 1px solid var(--color-border);
-}
-
-.claim-form .btn-primary {
-  padding: 12px;
-  border-radius: 8px;
-  border: none;
-  background: var(--color-primary);
-  color: white;
-  font-weight: bold;
-  cursor: pointer;
-}
-
-.logout-link {
-  background: none;
-  border: none;
-  color: #ef4444;
-  font-weight: bold;
-  cursor: pointer;
-  padding: 8px;
-  margin-bottom: 8px;
-  text-decoration: underline;
-}
-
-.error { color: red; text-align: center; }
-.success { color: green; text-align: center; }
 </style>

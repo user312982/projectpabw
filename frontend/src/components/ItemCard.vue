@@ -9,7 +9,7 @@
         <div class="header-left">
           <span class="type-badge" :class="item.type === 'lost' ? 'type-lost' : 'type-found'">
             <span class="type-dot"></span>
-            {{ item.type === 'lost' ? 'Hilang' : 'Ditemukan' }}
+            {{ item.type === 'lost' ? 'Lost' : 'Found' }}
           </span>
           <span class="status-badge" :class="'status-' + item.status">
             {{ statusLabel }}
@@ -34,7 +34,7 @@
           <polyline points="20 6 9 17 4 12"/>
         </svg>
         <span class="code-text">{{ item.unique_code || 'LF-' + item.id }}</span>
-        <span class="code-hint">{{ copied ? 'tersalin!' : 'salin' }}</span>
+        <span class="code-hint">{{ copied ? 'Copied!' : 'copy' }}</span>
       </div>
 
       <!-- Meta Info Grid -->
@@ -46,7 +46,7 @@
             </svg>
           </div>
           <div class="meta-info">
-            <span class="meta-label">Kategori</span>
+            <span class="meta-label">Category</span>
             <span class="meta-value">{{ capitalize(item.category) }}</span>
           </div>
         </div>
@@ -59,7 +59,7 @@
             </svg>
           </div>
           <div class="meta-info">
-            <span class="meta-label">Lokasi</span>
+            <span class="meta-label">Location</span>
             <span class="meta-value">{{ item.location }}</span>
           </div>
         </div>
@@ -72,27 +72,27 @@
             </svg>
           </div>
           <div class="meta-info">
-            <span class="meta-label">Pelapor</span>
-            <span v-if="!editingReporter" class="meta-value">{{ item.reporter_name || 'Anonim' }}</span>
+            <span class="meta-label">Reporter</span>
+            <span v-if="!editingReporter" class="meta-value">{{ item.reporter_name || 'Anonymous' }}</span>
             <div v-else class="inline-edit">
               <input
                 v-model="editReporterName"
                 type="text"
                 class="inline-edit-input"
-                placeholder="Nama pelapor"
+                placeholder="Reporter name"
                 @keyup.enter="saveReporterName"
                 @keyup.escape="cancelEditReporter"
                 ref="reporterInput"
               />
-              <button class="inline-edit-btn save-btn" @click="saveReporterName" title="Simpan">
+              <button class="inline-edit-btn save-btn" @click="saveReporterName" title="Save">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
               </button>
-              <button class="inline-edit-btn cancel-btn" @click="cancelEditReporter" title="Batal">
+              <button class="inline-edit-btn cancel-btn" @click="cancelEditReporter" title="Cancel">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
               </button>
             </div>
           </div>
-          <button v-if="canEdit && !editingReporter" class="edit-icon-btn" @click.stop="startEditReporter" title="Edit nama pelapor">
+          <button v-if="canEdit && !editingReporter" class="edit-icon-btn" @click.stop="startEditReporter" title="Edit reporter name">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
           </button>
         </div>
@@ -105,10 +105,10 @@
             </svg>
           </div>
           <div class="meta-info">
-            <span class="meta-label">Pelapor</span>
-            <span class="meta-value muted">Anonim</span>
+            <span class="meta-label">Reporter</span>
+            <span class="meta-value muted">Anonymous</span>
           </div>
-          <button v-if="canEdit" class="edit-icon-btn" @click.stop="startEditReporter" title="Tambah nama pelapor">
+          <button v-if="canEdit" class="edit-icon-btn" @click.stop="startEditReporter" title="Add reporter name">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           </button>
         </div>
@@ -120,7 +120,7 @@
             </svg>
           </div>
           <div class="meta-info">
-            <span class="meta-label">Kontak</span>
+            <span class="meta-label">Contact</span>
             <span class="meta-value">{{ item.reporter_contact }}</span>
           </div>
         </div>
@@ -197,9 +197,9 @@ function copyCode() {
 
 const statusLabel = computed(() => {
   switch (props.item.status) {
-    case 'open': return 'Aktif'
-    case 'claimed': return 'Diklaim'
-    case 'closed': return 'Selesai'
+    case 'open': return 'Open'
+    case 'claimed': return 'Claimed'
+    case 'closed': return 'Closed'
     default: return props.item.status
   }
 })
@@ -215,17 +215,17 @@ const relativeTime = computed(() => {
   const then = new Date(props.item.created_at)
   const diff = Math.floor((now - then) / 1000)
 
-  if (diff < 60) return 'Baru saja'
-  if (diff < 3600) return `${Math.floor(diff / 60)} menit`
-  if (diff < 86400) return `${Math.floor(diff / 3600)} jam`
-  if (diff < 604800) return `${Math.floor(diff / 86400)} hari`
-  return then.toLocaleDateString('id-ID', { day: '2-digit', month: 'short' })
+  if (diff < 60) return 'Just now'
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`
+  if (diff < 604800) return `${Math.floor(diff / 86400)}d ago`
+  return then.toLocaleDateString('en-US', { day: '2-digit', month: 'short' })
 })
 </script>
 
 <style scoped>
 .item-card {
-  background: #FFF8EC;
+  background: var(--color-surface);
   border-radius: 14px;
   display: flex;
   cursor: pointer;
@@ -252,11 +252,11 @@ const relativeTime = computed(() => {
 }
 
 .accent-lost {
-  background: #99AD7A;
+  background: var(--color-text-muted);
 }
 
 .accent-found {
-  background: #546B41;
+  background: var(--color-text-main);
 }
 
 .card-inner {
@@ -293,13 +293,13 @@ const relativeTime = computed(() => {
 }
 
 .type-lost {
-  background: rgba(153, 173, 122, 0.2);
-  color: #546B41;
+  background: rgba(153, 173, 122, 0.25);
+  color: var(--color-text-main);
 }
 
 .type-found {
-  background: rgba(84, 107, 65, 0.12);
-  color: #546B41;
+  background: rgba(84, 107, 65, 0.15);
+  color: var(--color-text-main);
 }
 
 .type-dot {
@@ -310,12 +310,12 @@ const relativeTime = computed(() => {
 }
 
 .type-lost .type-dot {
-  background: #99AD7A;
+  background: var(--color-text-muted);
   animation: pulse 2s infinite;
 }
 
 .type-found .type-dot {
-  background: #546B41;
+  background: var(--color-text-main);
 }
 
 .status-badge {
@@ -328,24 +328,24 @@ const relativeTime = computed(() => {
 }
 
 .status-open {
-  background: rgba(153, 173, 122, 0.2);
-  color: #546B41;
+  background: rgba(153, 173, 122, 0.3);
+  color: var(--color-text-main);
 }
 
 .status-claimed {
-  background: rgba(220, 204, 172, 0.4);
-  color: #546B41;
+  background: rgba(220, 204, 172, 0.5);
+  color: var(--color-text-main);
 }
 
 .status-closed {
-  background: rgba(84, 107, 65, 0.08);
-  color: #99AD7A;
+  background: rgba(84, 107, 65, 0.1);
+  color: var(--color-text-muted);
 }
 
 .time-badge {
   font-size: 10px;
   font-weight: 500;
-  color: #99AD7A;
+  color: var(--color-text-muted);
   white-space: nowrap;
 }
 
@@ -354,7 +354,7 @@ const relativeTime = computed(() => {
   font-size: 16px;
   font-weight: 700;
   line-height: 1.3;
-  color: #546B41;
+  color: var(--color-text-main);
   margin: 0;
   letter-spacing: -0.01em;
 }
@@ -362,7 +362,7 @@ const relativeTime = computed(() => {
 /* Description */
 .card-desc {
   font-size: 12px;
-  color: #99AD7A;
+  color: var(--color-text-muted);
   line-height: 1.5;
   margin: 0;
   display: -webkit-box;
@@ -378,19 +378,19 @@ const relativeTime = computed(() => {
   gap: 6px;
   align-self: flex-start;
   padding: 6px 12px;
-  background: #546B41;
+  background: var(--color-primary);
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .code-block:hover {
-  background: #3d4f2f;
+  background: var(--color-primary-dark);
   transform: translateY(-1px);
 }
 
 .code-icon {
-  color: #DCCCAC;
+  color: var(--color-border);
   flex-shrink: 0;
 }
 
@@ -398,14 +398,14 @@ const relativeTime = computed(() => {
   font-family: 'SF Mono', 'Consolas', 'Monaco', monospace;
   font-size: 13px;
   font-weight: 700;
-  color: #FFF8EC;
+  color: var(--color-on-primary);
   letter-spacing: 0.04em;
 }
 
 .code-hint {
   font-size: 9px;
   font-weight: 500;
-  color: #DCCCAC;
+  color: var(--color-border);
   text-transform: lowercase;
   opacity: 0;
   transition: opacity 0.2s ease;
@@ -417,14 +417,14 @@ const relativeTime = computed(() => {
 
 /* Copied State */
 .code-block.copied {
-  background: #99AD7A;
+  background: var(--color-surface-hover);
   animation: copySuccess 0.4s ease;
 }
 
 .code-block.copied .code-icon,
 .code-block.copied .code-text,
 .code-block.copied .code-hint {
-  color: #546B41;
+  color: var(--color-text-main);
 }
 
 .code-block.copied .code-hint {
@@ -474,7 +474,7 @@ const relativeTime = computed(() => {
   justify-content: center;
   flex-shrink: 0;
   background: rgba(84, 107, 65, 0.1);
-  color: #546B41;
+  color: var(--color-text-main);
 }
 
 .meta-info {
@@ -487,7 +487,7 @@ const relativeTime = computed(() => {
 .meta-label {
   font-size: 9px;
   font-weight: 500;
-  color: #99AD7A;
+  color: var(--color-text-muted);
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
@@ -495,14 +495,14 @@ const relativeTime = computed(() => {
 .meta-value {
   font-size: 11px;
   font-weight: 600;
-  color: #546B41;
+  color: var(--color-text-main);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .meta-value.muted {
-  color: #99AD7A;
+  color: var(--color-text-muted);
   font-style: italic;
 }
 
@@ -515,7 +515,7 @@ const relativeTime = computed(() => {
   border-radius: 6px;
   border: none;
   background: rgba(84, 107, 65, 0.08);
-  color: #99AD7A;
+  color: var(--color-text-muted);
   cursor: pointer;
   flex-shrink: 0;
   transition: all 0.2s ease;
@@ -524,7 +524,7 @@ const relativeTime = computed(() => {
 
 .edit-icon-btn:hover {
   background: rgba(84, 107, 65, 0.2);
-  color: #546B41;
+  color: var(--color-text-main);
 }
 
 .inline-edit {
@@ -538,18 +538,18 @@ const relativeTime = computed(() => {
   flex: 1;
   min-width: 0;
   padding: 2px 6px;
-  border: 1px solid #99AD7A;
+  border: 1px solid var(--color-text-muted);
   border-radius: 4px;
   font-size: 11px;
   font-weight: 600;
-  color: #546B41;
-  background: #FFF8EC;
+  color: var(--color-text-main);
+  background: var(--color-surface);
   outline: none;
   font-family: inherit;
 }
 
 .inline-edit-input:focus {
-  border-color: #546B41;
+  border-color: var(--color-text-main);
   box-shadow: 0 0 0 2px rgba(84, 107, 65, 0.15);
 }
 
@@ -568,17 +568,17 @@ const relativeTime = computed(() => {
 }
 
 .inline-edit-btn.save-btn {
-  background: #546B41;
-  color: #FFF8EC;
+  background: var(--color-primary);
+  color: var(--color-on-primary);
 }
 
 .inline-edit-btn.save-btn:hover {
-  background: #3d4f2f;
+  background: var(--color-primary-dark);
 }
 
 .inline-edit-btn.cancel-btn {
   background: rgba(220, 204, 172, 0.5);
-  color: #546B41;
+  color: var(--color-text-main);
 }
 
 .inline-edit-btn.cancel-btn:hover {

@@ -288,7 +288,7 @@ def register(data: RegisterRequest, db: Session = Depends(get_db)):
     if existing:
         raise HTTPException(
             status_code=400,
-            detail="Username sudah digunakan",
+            detail=[{"loc": ["body", "username"], "msg": "Username sudah digunakan"}],
         )
 
     user = User(
@@ -332,14 +332,14 @@ def login(
         _login_attempts[client_ip].append(datetime.now(timezone.utc))
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Kredensial tidak valid",
+            detail=[{"loc": ["body", "password"], "msg": "Kredensial tidak valid"}],
             headers={"WWW-Authenticate": "Bearer"},
         )
 
     if not user.is_active:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Akun dinonaktifkan. Hubungi petugas.",
+            detail=[{"loc": ["body", "username"], "msg": "Akun dinonaktifkan. Hubungi petugas."}],
         )
 
     user.last_login = datetime.now(timezone.utc)
@@ -368,7 +368,7 @@ def register_petugas(data: RegisterPetugasRequest, db: Session = Depends(get_db)
     if existing:
         raise HTTPException(
             status_code=400,
-            detail="Username sudah digunakan",
+            detail=[{"loc": ["body", "username"], "msg": "Username sudah digunakan"}],
         )
 
     user = User(

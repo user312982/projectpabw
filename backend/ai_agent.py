@@ -24,6 +24,9 @@ import time
 import traceback
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional
+from contextvars import ContextVar
+
+current_user_id: ContextVar[Optional[int]] = ContextVar("current_user_id", default=None)
 
 # ── Rate Limiter ──────────────────────────────────────────────────
 # Simple rate limiter: max 10 requests per minute
@@ -70,8 +73,8 @@ class ReportLostInput(BaseModel):
         description="Deskripsi detail tentang barang: warna, merk, ciri khas",
     )
     location: str = Field(description="LOKASI terakhir barang terlihat (WAJIB diisi)")
-    reporter_contact: str = Field(
-        default="", description="Kontak pelapor: No HP atau email"
+    reporter_contact: Optional[str] = Field(
+        default=None, description="Kontak pelapor (opsional, disarankan): No HP atau email. Kosongkan jika tidak disebutkan."
     )
     force_create: bool = Field(
         default=False,
@@ -97,8 +100,8 @@ class ReportFoundInput(BaseModel):
     location: str = Field(
         description="LOKASI detail tempat barang ditemukan (WAJIB diisi)"
     )
-    reporter_contact: str = Field(
-        default="", description="Kontak penemu: No HP atau email"
+    reporter_contact: Optional[str] = Field(
+        default=None, description="Kontak penemu (opsional): No HP atau email. Kosongkan jika barang diserahkan ke satpam atau tidak disebutkan."
     )
     force_create: bool = Field(
         default=False,
@@ -249,6 +252,7 @@ def report_lost_item(
             status=ItemStatus.open.value,
             reporter_name=(reporter_name.strip() if reporter_name else "Anonim"),
             reporter_contact=reporter_contact.strip() if reporter_contact else "",
+            uploader_id=current_user_id.get(),
         )
         db.add(item)
         db.commit()
@@ -352,6 +356,7 @@ def report_found_item(
             status=ItemStatus.open.value,
             reporter_name=(reporter_name.strip() if reporter_name else "Anonim"),
             reporter_contact=reporter_contact.strip() if reporter_contact else "",
+            uploader_id=current_user_id.get(),
         )
         db.add(item)
         db.commit()
@@ -712,6 +717,7 @@ async def process_chat(message: str, chat_history: list = None, user_id: int = N
         Tuple (response_text, tools_used)
     """
     global _last_request_time
+    current_user_id.set(user_id)
     
     # Rate limiting: wait if request too frequent
     current_time = time.time()

@@ -303,6 +303,9 @@ onMounted(() => {
 .sidebar-wrapper {
   width: 160px;
   flex-shrink: 0;
+  height: calc(100vh - 32px);
+  position: sticky;
+  top: 16px;
 }
 
 .sidebar {
@@ -411,7 +414,7 @@ onMounted(() => {
 
 .footer-card {
   padding: 16px;
-  background: transparent;
+  background: var(--color-surface);
   border: 1px solid var(--color-border);
 }
 

@@ -73,6 +73,10 @@ class ReportLostInput(BaseModel):
     reporter_contact: str = Field(
         default="", description="Kontak pelapor: No HP atau email"
     )
+    force_create: bool = Field(
+        default=False,
+        description="JANGAN ISI FIELD INI. Hanya gunakan jika user sudah konfirmasi ingin melanjutkan laporan meskipun ada barang serupa.",
+    )
 
 
 class ReportFoundInput(BaseModel):
@@ -95,6 +99,10 @@ class ReportFoundInput(BaseModel):
     )
     reporter_contact: str = Field(
         default="", description="Kontak penemu: No HP atau email"
+    )
+    force_create: bool = Field(
+        default=False,
+        description="JANGAN ISI FIELD INI. Hanya gunakan jika user sudah konfirmasi ingin melanjutkan laporan meskipun ada barang serupa.",
     )
 
 
@@ -165,10 +173,11 @@ def report_lost_item(
     description: str = "",
     location: str = "",
     reporter_contact: str = "",
+    force_create: bool = False,
 ) -> str:
     """Simpan data laporan barang hilang ke database sistem ITK LostFound.
     WAJIB: title (nama barang) dan location (lokasi terakhir) harus diisi. reporter_name (nama pelapor) opsional.
-    SEBELUM melaporkan, sistem akan mencari barang serupa di database."""
+    SEBELUM melaporkan, sistem akan mencari barang serupa di database (berdasarkan NAMA BARANG saja)."""
     if not title or not title.strip():
         return "[ERROR] Nama barang tidak boleh kosong! Mohon beri tahu nama barang yang hilang."
     if not location or not location.strip():
@@ -179,61 +188,56 @@ def report_lost_item(
     if category and category not in valid_categories:
         return f"[ERROR] Kategori '{category}' tidak valid. Pilih: {', '.join(valid_categories)}"
 
-    # 🔍 CARI BARANG SERUPA TERLEBIH DAHULU
+    # 🔍 CARI BARANG SERUPA (BERDASARKAN NAMA SAJA) - kecuali force_create=True
     db = SessionLocal()
     try:
-        # Cari barang ditemukan yang mungkin cocok
-        found_items = db.query(Item).filter(
-            Item.type == "found",
-            Item.status == "open"
-        ).all()
-        
-        similar_items = []
-        for found in found_items:
-            score = 0
-            # Cek kategori sama
-            if category == found.category:
-                score += 2
-            # Cek judul mirip
-            title_lower = title.lower()
-            found_title_lower = found.title.lower()
-            if title_lower in found_title_lower or found_title_lower in title_lower:
-                score += 3
-            # Cek lokasi mirip
-            if location and found.location:
-                loc_lower = location.lower()
-                found_loc_lower = found.location.lower()
-                if loc_lower in found_loc_lower or found_loc_lower in loc_lower:
-                    score += 2
-            # Cek deskripsi (jika ada)
-            if description and found.description:
-                desc_lower = description.lower()
-                found_desc_lower = found.description.lower()
-                if any(word in found_desc_lower for word in desc_lower.split() if len(word) > 3):
-                    score += 1
+        if not force_create:
+            # Cari barang ditemukan yang mungkin cocok (HANYA berdasarkan nama/title)
+            found_items = db.query(Item).filter(
+                Item.type == "found",
+                Item.status == "open"
+            ).all()
             
-            if score >= 3:  # Threshold kecocokan
-                similar_items.append((found, score))
-        
-        # Jika ada yang cocok, beri tahu user
-        if similar_items:
-            similar_items.sort(key=lambda x: x[1], reverse=True)
-            lines = ["[PERHATIAN] 🔍 Ditemukan barang serupa di database:"]
-            for found, score in similar_items[:3]:  # Max 3 hasil
-                lines.append(
-                    f"\n- **{found.title}** (Ditemukan)\n"
-                    f"  Lokasi: {found.location}\n"
-                    f"  Kategori: {found.category}\n"
-                    f"  Penemu: {found.reporter_name or 'Anonim'}\n"
-                    f"  Kontak: {found.reporter_contact or '-'}\n"
-                    f"  Kode: {found.unique_code}\n"
-                    f"  Tingkat kecocokan: {'⭐' * min(score, 5)}"
+            similar_items = []
+            title_lower = title.lower()
+            
+            for found in found_items:
+                found_title_lower = found.title.lower()
+                # Cek apakah nama barang mirip (hanya berdasarkan nama, bukan lokasi)
+                # Menggunakan fuzzy matching sederhana - cek setiap kata dalam title
+                title_words = [w for w in title_lower.split() if len(w) > 2]
+                found_words = [w for w in found_title_lower.split() if len(w) > 2]
+                
+                # Cek jika ada kata yang sama
+                matching_words = set(title_words) & set(found_words)
+                
+                # Juga cek jika salah satu title merupakan bagian dari title lainnya
+                is_similar = (
+                    len(matching_words) >= 1 or  # Ada minimal 1 kata yang sama
+                    title_lower in found_title_lower or  # Title user bagian dari title di DB
+                    found_title_lower in title_lower  # Title di DB bagian dari title user
                 )
-            lines.append("\n💡 Apakah ini barang yang Anda maksud? Jika ya, Anda bisa menghubungi penemu langsung.")
-            lines.append("Jika tetap ingin melanjutkan laporan hilang, silakan konfirmasi.")
-            return "\n".join(lines)
+                
+                if is_similar:
+                    similar_items.append(found)
+            
+            # Jika ada yang cocok, beri tahu user
+            if similar_items:
+                lines = ["[PERHATIAN] Ditemukan barang serupa di database (berdasarkan nama):"]
+                for found in similar_items[:3]:  # Max 3 hasil
+                    lines.append(
+                        f"\n- {found.title} (Ditemukan)\n"
+                        f"  Lokasi: {found.location}\n"
+                        f"  Kategori: {found.category}\n"
+                        f"  Penemu: {found.reporter_name or 'Anonim'}\n"
+                        f"  Kontak: {found.reporter_contact or '-'}\n"
+                        f"  Kode: {found.unique_code}"
+                    )
+                lines.append("\nApakah ini barang yang Anda maksud? Jika ya, Anda bisa menghubungi penemu langsung.")
+                lines.append("Jika ingin tetap membuat laporan baru, konfirmasi dengan jelas.")
+                return "\n".join(lines)
         
-        # Jika tidak ada yang cocok, lanjutkan buat laporan
+        # Jika tidak ada yang cocok ATAU force_create=True, lanjutkan buat laporan
         item = Item(
             unique_code=generate_unique_code(db),
             title=title.strip(),
@@ -254,7 +258,7 @@ def report_lost_item(
         rag_system.add_item(item)
 
         return (
-            f"[SUCCESS] ✅ Laporan barang hilang berhasil dibuat!\n"
+            f"[SUCCESS] Laporan barang hilang berhasil dibuat!\n"
             f"   Kode Unik: {item.unique_code}\n"
             f"   Barang: {title}\n"
             f"   Kategori: {category}\n"
@@ -273,10 +277,11 @@ def report_found_item(
     description: str = "",
     location: str = "",
     reporter_contact: str = "",
+    force_create: bool = False,
 ) -> str:
     """Simpan data laporan barang ditemukan ke database sistem ITK LostFound.
     WAJIB: title (nama barang) dan location (lokasi ditemukan) harus diisi. reporter_name (nama penemu) opsional.
-    SEBELUM melaporkan, sistem akan mencari barang hilang yang mungkin cocok."""
+    SEBELUM melaporkan, sistem akan mencari barang hilang yang mungkin cocok (berdasarkan NAMA BARANG saja)."""
     if not title or not title.strip():
         return "[ERROR] Nama barang tidak boleh kosong! Mohon beri tahu nama barang yang ditemukan."
     if not location or not location.strip():
@@ -286,61 +291,56 @@ def report_found_item(
     if category and category not in valid_categories:
         return f"[ERROR] Kategori '{category}' tidak valid. Pilih: {', '.join(valid_categories)}"
 
-    # 🔍 CARI BARANG HILANG YANG SERUPA TERLEBIH DAHULU
+    # 🔍 CARI BARANG HILANG YANG SERUPA (BERDASARKAN NAMA SAJA) - kecuali force_create=True
     db = SessionLocal()
     try:
-        # Cari barang hilang yang mungkin cocok
-        lost_items = db.query(Item).filter(
-            Item.type == "lost",
-            Item.status == "open"
-        ).all()
-        
-        similar_items = []
-        for lost in lost_items:
-            score = 0
-            # Cek kategori sama
-            if category == lost.category:
-                score += 2
-            # Cek judul mirip
-            title_lower = title.lower()
-            lost_title_lower = lost.title.lower()
-            if title_lower in lost_title_lower or lost_title_lower in title_lower:
-                score += 3
-            # Cek lokasi mirip
-            if location and lost.location:
-                loc_lower = location.lower()
-                lost_loc_lower = lost.location.lower()
-                if loc_lower in lost_loc_lower or lost_loc_lower in loc_lower:
-                    score += 2
-            # Cek deskripsi (jika ada)
-            if description and lost.description:
-                desc_lower = description.lower()
-                lost_desc_lower = lost.description.lower()
-                if any(word in lost_desc_lower for word in desc_lower.split() if len(word) > 3):
-                    score += 1
+        if not force_create:
+            # Cari barang hilang yang mungkin cocok (HANYA berdasarkan nama/title)
+            lost_items = db.query(Item).filter(
+                Item.type == "lost",
+                Item.status == "open"
+            ).all()
             
-            if score >= 3:  # Threshold kecocokan
-                similar_items.append((lost, score))
-        
-        # Jika ada yang cocok, beri tahu user
-        if similar_items:
-            similar_items.sort(key=lambda x: x[1], reverse=True)
-            lines = ["[PERHATIAN] 🔍 Ditemukan barang hilang yang serupa:"]
-            for lost, score in similar_items[:3]:  # Max 3 hasil
-                lines.append(
-                    f"\n- **{lost.title}** (Hilang)\n"
-                    f"  Lokasi: {lost.location}\n"
-                    f"  Kategori: {lost.category}\n"
-                    f"  Pelapor: {lost.reporter_name or 'Anonim'}\n"
-                    f"  Kontak: {lost.reporter_contact or '-'}\n"
-                    f"  Kode: {lost.unique_code}\n"
-                    f"  Tingkat kecocokan: {'⭐' * min(score, 5)}"
+            similar_items = []
+            title_lower = title.lower()
+            
+            for lost in lost_items:
+                lost_title_lower = lost.title.lower()
+                # Cek apakah nama barang mirip (hanya berdasarkan nama, bukan lokasi)
+                # Menggunakan fuzzy matching sederhana - cek setiap kata dalam title
+                title_words = [w for w in title_lower.split() if len(w) > 2]
+                lost_words = [w for w in lost_title_lower.split() if len(w) > 2]
+                
+                # Cek jika ada kata yang sama
+                matching_words = set(title_words) & set(lost_words)
+                
+                # Juga cek jika salah satu title merupakan bagian dari title lainnya
+                is_similar = (
+                    len(matching_words) >= 1 or  # Ada minimal 1 kata yang sama
+                    title_lower in lost_title_lower or  # Title user bagian dari title di DB
+                    lost_title_lower in title_lower  # Title di DB bagian dari title user
                 )
-            lines.append("\n💡 Apakah ini barang yang Anda maksud? Jika ya, Anda bisa menghubungi pemilik langsung.")
-            lines.append("Jika tetap ingin melanjutkan laporan ditemukan, silakan konfirmasi.")
-            return "\n".join(lines)
+                
+                if is_similar:
+                    similar_items.append(lost)
+            
+            # Jika ada yang cocok, beri tahu user
+            if similar_items:
+                lines = ["[PERHATIAN] Ditemukan barang hilang yang serupa (berdasarkan nama):"]
+                for lost in similar_items[:3]:  # Max 3 hasil
+                    lines.append(
+                        f"\n- {lost.title} (Hilang)\n"
+                        f"  Lokasi: {lost.location}\n"
+                        f"  Kategori: {lost.category}\n"
+                        f"  Pelapor: {lost.reporter_name or 'Anonim'}\n"
+                        f"  Kontak: {lost.reporter_contact or '-'}\n"
+                        f"  Kode: {lost.unique_code}"
+                    )
+                lines.append("\nApakah ini barang yang Anda maksud? Jika ya, Anda bisa menghubungi pemilik langsung.")
+                lines.append("Jika ingin tetap membuat laporan baru, konfirmasi dengan jelas.")
+                return "\n".join(lines)
         
-        # Jika tidak ada yang cocok, lanjutkan buat laporan
+        # Jika tidak ada yang cocok ATAU force_create=True, lanjutkan buat laporan
         item = Item(
             unique_code=generate_unique_code(db),
             title=title.strip(),
@@ -361,7 +361,7 @@ def report_found_item(
         rag_system.add_item(item)
 
         return (
-            f"[SUCCESS] ✅ Laporan barang ditemukan berhasil dibuat!\n"
+            f"[SUCCESS] Laporan barang ditemukan berhasil dibuat!\n"
             f"   Kode Unik: {item.unique_code}\n"
             f"   Barang: {title}\n"
             f"   Kategori: {category}\n"
@@ -644,12 +644,14 @@ Untuk MELAPORKAN BARANG DITEMUKAN, WAJIB menanyakan dan mengisi:
 - Jika user bilang "itu", "tersebut", atau "dia", pahami apa yang dimaksud dari chat sebelumnya.
 
 ### 6. AUTO-MATCH SEBELUM LAPORAN:
-- `report_lost_item` dan `report_found_item` akan otomatis mencari barang serupa SEBELUM membuat laporan.
+- `report_lost_item` dan `report_found_item` akan otomatis mencari barang serupa (berdasarkan NAMA BARANG saja) SEBELUM membuat laporan.
 - Jika ada kecocokan, sistem akan mengembalikan daftar barang serupa dan LAPORAN TIDAK JADI DIBUAT.
 - Jika ada kecocokan, informasikan ke user: "Saya menemukan X barang serupa di database. Apakah ini barang yang Anda maksud?"
-- Jika user konfirmasi bahwa itu memang barang yang dimaksud, arahkan ke kontak pelapor/penemu.
-- Jika user bilang "bukan" atau "lanjutkan", BARU panggil tool report_lost_item/report_found_item lagi untuk membuat laporan.
-- Tool akan otomatis mencari kecocokan saat pertama kali dipanggil, jadi cukup panggil toolnya.
+- Jika user konfirmasi "iya", "ya", "benar", "itu", "yang itu" (artinya ini barang yang dimaksud), arahkan ke kontak pelapor/penemu.
+- JIKA USER INGIN MELANJUTKAN / MEMBUAT LAPORAN BARU (bilang: "lanjutkan", "iya lanjut", "ya lanjut", "ya tetap", "bukan", "tetap buat", "tetap lanjut", "continue", "skip", "abaikan", atau menyatakan ingin membuat laporan baru), MAKA:
+  - Panggil tool `report_lost_item` atau `report_found_item` lagi DENGAN parameter `force_create: true`
+  - Ini akan membuat laporan baru tanpa mengecek kecocokan lagi
+- Tool akan otomatis mencari kecocokan saat pertama kali dipanggil, jadi cukup panggil tool dengan `force_create: true` saat user ingin melanjutkan.
 
 ### 7. FORMAT RESPON:
 - JANGAN gunakan emoji sama sekali dalam respon

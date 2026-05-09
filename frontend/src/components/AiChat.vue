@@ -200,6 +200,7 @@ defineExpose({ sendMessageExt, setInputOnly });
 }
 
 .header-title h3 {
+  color: var(--color-on-primary);
   margin: 0;
   font-size: 18px;
   font-weight: var(--font-weight-heavy);

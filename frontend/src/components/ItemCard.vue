@@ -39,19 +39,7 @@
 
       <!-- Meta Info Grid -->
       <div class="meta-grid">
-        <div class="meta-item">
-          <div class="meta-icon-wrap">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M4 7V4a2 2 0 0 1 2-2h8.5L20 7.5V20a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-3"/>
-            </svg>
-          </div>
-          <div class="meta-info">
-            <span class="meta-label">Category</span>
-            <span class="meta-value">{{ capitalize(item.category) }}</span>
-          </div>
-        </div>
-
-        <div class="meta-item" v-if="item.location">
+        <div class="meta-item full-width" v-if="item.location">
           <div class="meta-icon-wrap">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
               <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
@@ -61,6 +49,18 @@
           <div class="meta-info">
             <span class="meta-label">Location</span>
             <span class="meta-value">{{ item.location }}</span>
+          </div>
+        </div>
+
+        <div class="meta-item">
+          <div class="meta-icon-wrap">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 7V4a2 2 0 0 1 2-2h8.5L20 7.5V20a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-3"/>
+            </svg>
+          </div>
+          <div class="meta-info">
+            <span class="meta-label">Category</span>
+            <span class="meta-value">{{ capitalize(item.category) }}</span>
           </div>
         </div>
 
@@ -463,6 +463,15 @@ const relativeTime = computed(() => {
   background: rgba(220, 204, 172, 0.3);
   border-radius: 8px;
   border: 1px solid rgba(220, 204, 172, 0.5);
+}
+
+.meta-item.full-width {
+  grid-column: 1 / -1;
+}
+
+.meta-item.full-width .meta-value {
+  white-space: normal;
+  word-break: break-word;
 }
 
 .meta-icon-wrap {

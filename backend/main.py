@@ -21,7 +21,10 @@ else:
 from datetime import datetime, timedelta, timezone
 from typing import List, Optional
 
-from ai_agent import process_chat
+import hashlib
+import uuid
+
+from ai_agent import get_pending_report_draft, pop_pending_report_draft, process_chat
 from database import (
     Item,
     ItemCategory,
@@ -35,8 +38,9 @@ from database import (
     get_db,
     init_db,
 )
-from fastapi import Depends, FastAPI, HTTPException, Query, Request, status
+from fastapi import Depends, FastAPI, File, HTTPException, Query, Request, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import JWTError, jwt
 from passlib.context import CryptContext
@@ -86,6 +90,9 @@ def _is_rate_limited(ip: str) -> bool:
 # ── App ─────────────────────────────────────────────────────────────
 
 app = FastAPI(title="ITK LostFound", version="1.0.0")
+UPLOAD_DIR = Path(__file__).parent / "uploads"
+UPLOAD_DIR.mkdir(exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=str(UPLOAD_DIR)), name="uploads")
 
 app.add_middleware(
     CORSMiddleware,
@@ -276,6 +283,14 @@ class ChatRequest(BaseModel):
 class ChatResponse(BaseModel):
     response: str
     tools_used: Optional[list] = None
+    chat_action: Optional[dict] = None
+
+
+class FinalizeDraftRequest(BaseModel):
+    image_url: Optional[str] = None
+    image_mime: Optional[str] = None
+    image_size: Optional[int] = None
+    image_hash: Optional[str] = None
 
 
 # ── Routes: Auth ────────────────────────────────────────────────────
@@ -494,8 +509,78 @@ async def chat(
         user_role=user.role,
     )
     if isinstance(result, tuple):
+        if len(result) >= 3:
+            return ChatResponse(response=result[0], tools_used=result[1], chat_action=result[2])
         return ChatResponse(response=result[0], tools_used=result[1])
     return ChatResponse(response=result)
+
+
+@app.post("/api/uploads/photo")
+async def upload_photo(
+    file: UploadFile = File(...),
+    user: User = Depends(require_user),
+):
+    allowed_types = {"image/jpeg", "image/png", "image/webp"}
+    max_size_bytes = 5 * 1024 * 1024
+
+    if file.content_type not in allowed_types:
+        raise HTTPException(status_code=400, detail="Tipe file tidak didukung. Gunakan JPG/PNG/WEBP.")
+
+    data = await file.read()
+    if len(data) > max_size_bytes:
+        raise HTTPException(status_code=400, detail="Ukuran foto maksimal 5MB.")
+
+    ext_map = {"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp"}
+    filename = f"{uuid.uuid4().hex}{ext_map[file.content_type]}"
+    out_path = UPLOAD_DIR / filename
+    out_path.write_bytes(data)
+
+    file_hash = hashlib.sha256(data).hexdigest()
+    return {
+        "image_url": f"/uploads/{filename}",
+        "image_mime": file.content_type,
+        "image_size": len(data),
+        "image_hash": file_hash,
+    }
+
+
+@app.post("/api/chat-report-drafts/{draft_id}/finalize")
+def finalize_chat_report_draft(
+    draft_id: str,
+    payload: FinalizeDraftRequest,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_user),
+):
+    draft = get_pending_report_draft(draft_id)
+    if not draft:
+        raise HTTPException(status_code=404, detail="Draft tidak ditemukan atau kadaluarsa")
+    if draft.get("uploader_id") != user.id:
+        raise HTTPException(status_code=403, detail="Draft bukan milik Anda")
+
+    date_event = datetime.now(timezone.utc)
+    item = Item(
+        unique_code=generate_unique_code(db),
+        title=draft["title"],
+        description=draft.get("description"),
+        category=draft.get("category", "lainnya"),
+        type=draft["report_type"],
+        location=draft["location"],
+        date_event=date_event,
+        image_url=payload.image_url,
+        image_mime=payload.image_mime,
+        image_size=payload.image_size,
+        image_hash=payload.image_hash,
+        image_uploaded_at=(datetime.now(timezone.utc) if payload.image_url else None),
+        status=ItemStatus.open.value,
+        reporter_name=draft.get("reporter_name"),
+        reporter_contact=draft.get("reporter_contact"),
+        uploader_id=user.id,
+    )
+    db.add(item)
+    db.commit()
+    db.refresh(item)
+    pop_pending_report_draft(draft_id)
+    return item.to_dict()
 
 
 # ── Routes: Items CRUD ──────────────────────────────────────────────
@@ -608,6 +693,44 @@ def update_item(
     for key, value in update_data.items():
         setattr(item, key, value)
 
+    db.commit()
+    db.refresh(item)
+    return item.to_dict()
+
+
+@app.post("/api/items/{item_id}/photo")
+async def update_item_photo(
+    item_id: int,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    user: User = Depends(require_user),
+):
+    item = db.query(Item).filter(Item.id == item_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="Item tidak ditemukan")
+    if item.uploader_id != user.id and user.role != UserRole.petugas.value:
+        raise HTTPException(status_code=403, detail="Tidak memiliki akses untuk mengubah foto item ini")
+
+    allowed_types = {"image/jpeg", "image/png", "image/webp"}
+    max_size_bytes = 5 * 1024 * 1024
+    if file.content_type not in allowed_types:
+        raise HTTPException(status_code=400, detail="Tipe file tidak didukung. Gunakan JPG/PNG/WEBP.")
+
+    data = await file.read()
+    if len(data) > max_size_bytes:
+        raise HTTPException(status_code=400, detail="Ukuran foto maksimal 5MB.")
+
+    ext_map = {"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp"}
+    filename = f"{uuid.uuid4().hex}{ext_map[file.content_type]}"
+    out_path = UPLOAD_DIR / filename
+    out_path.write_bytes(data)
+    file_hash = hashlib.sha256(data).hexdigest()
+
+    item.image_url = f"/uploads/{filename}"
+    item.image_mime = file.content_type
+    item.image_size = len(data)
+    item.image_hash = file_hash
+    item.image_uploaded_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(item)
     return item.to_dict()

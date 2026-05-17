@@ -51,6 +51,20 @@
     </div>
 
     <!-- Input Area -->
+    <div v-if="pendingDraft || pendingPhotoEdit" class="photo-panel">
+      <p class="photo-title">
+        {{ pendingDraft ? 'Tambahkan foto untuk laporan ini? (opsional)' : `Upload foto baru untuk item ${pendingPhotoEdit?.unique_code}` }}
+      </p>
+      <input class="photo-input" type="file" accept="image/jpeg,image/png,image/webp" @change="onFileSelected" />
+      <div class="photo-actions">
+        <button class="photo-upload-btn" type="button" :disabled="uploading || !selectedFile" @click="submitPhotoAction">
+          {{ uploading ? 'Uploading...' : (pendingDraft ? 'Upload & Simpan' : 'Upload & Update Foto') }}
+        </button>
+        <button class="photo-skip-btn" type="button" :disabled="uploading" @click="cancelPhotoAction">
+          {{ pendingDraft ? 'Lewati Foto' : 'Batal' }}
+        </button>
+      </div>
+    </div>
     <form @submit.prevent="sendMessage" class="chat-input-form">
       <input
         v-model="input"
@@ -75,7 +89,12 @@ const emit = defineEmits(['data-changed'])
 const messages = ref([])
 const input = ref('')
 const loading = ref(false)
+const uploading = ref(false)
+const pendingDraft = ref(null)
+const pendingPhotoEdit = ref(null)
+const selectedFile = ref(null)
 const messagesContainer = ref(null)
+const activeItemCodeContext = ref(null)
 
 const suggestions = [
   'Lihat laporan terbaru',
@@ -90,7 +109,12 @@ function getTime() {
 
 function formatMessage(text) {
   if (!text) return ''
-  return text
+  const normalized = text
+    .replace(/\[SUCCESS\]\s*/g, 'Berhasil: ')
+    .replace(/\[ERROR\]\s*/g, 'Error: ')
+    .replace(/\[INFO\]\s*/g, 'Info: ')
+    .replace(/\[PERHATIAN\]\s*/g, 'Perhatian: ')
+  return normalized
     .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
     .replace(/\n/g, '<br>')
 }
@@ -111,10 +135,18 @@ async function sendMessage() {
   const text = input.value.trim()
   if (!text || loading.value) return
 
+  captureItemCodeContext(text)
   messages.value.push({ role: 'user', text, time: getTime() })
   input.value = ''
   loading.value = true
   await scrollToBottom()
+
+  const editedByChat = await maybeHandleEditPhotoIntent(text)
+  if (editedByChat) {
+    loading.value = false
+    await scrollToBottom()
+    return
+  }
 
   try {
     // Kirim riwayat chat untuk konteks percakapan
@@ -132,7 +164,14 @@ async function sendMessage() {
       text: res.data.response,
       time: getTime(),
     })
-    emit('data-changed', res.data.tools_used)
+    if (res.data.chat_action && res.data.chat_action.type === 'request_photo_upload') {
+      pendingDraft.value = res.data.chat_action
+    }
+    emit('data-changed', {
+      toolsUsed: res.data.tools_used || [],
+      userText: text,
+      aiText: res.data.response || '',
+    })
   } catch (err) {
     console.error('Chat error:', err)
     messages.value.push({
@@ -142,6 +181,169 @@ async function sendMessage() {
     })
   } finally {
     loading.value = false
+    await scrollToBottom()
+  }
+}
+
+async function maybeHandleEditPhotoIntent(text) {
+  const normalized = (text || '').toLowerCase()
+  const hasEditIntent = /(edit|ganti|ubah|update|perbarui)/i.test(normalized)
+  const hasPhotoContext = /(foto|gambar|image)/i.test(normalized)
+  const codeMatch = text.match(/\bLF-[A-Z0-9]{4,}\b/i)
+  const hasContextualPhotoEdit = hasPhotoContext && !!activeItemCodeContext.value
+
+  if (!((hasEditIntent && hasPhotoContext) || hasContextualPhotoEdit)) return false
+
+  if (!codeMatch && !activeItemCodeContext.value) {
+    messages.value.push({
+      role: 'ai',
+      text: 'Bisa. Untuk ganti foto, sebutkan kode unik itemnya ya. Contoh: "saya mau ganti foto LF-7FXU29".',
+      time: getTime(),
+    })
+    return true
+  }
+
+  const uniqueCode = (codeMatch?.[0] || activeItemCodeContext.value).toUpperCase()
+  try {
+    const res = await api.get(`/api/items/by-code/${uniqueCode}`)
+    pendingPhotoEdit.value = {
+      item_id: res.data.id,
+      unique_code: uniqueCode,
+    }
+    messages.value.push({
+      role: 'ai',
+      text: `Siap, saya bantu ganti foto item ${uniqueCode}. Silakan upload foto barunya.`,
+      time: getTime(),
+    })
+  } catch (err) {
+    messages.value.push({
+      role: 'ai',
+      text: `Kode ${uniqueCode} belum ditemukan. Cek lagi kodenya, lalu kirim ulang. Contoh: "ganti foto ${uniqueCode}".`,
+      time: getTime(),
+    })
+  }
+  return true
+}
+
+function captureItemCodeContext(text) {
+  const codeMatch = (text || '').match(/\bLF-[A-Z0-9]{4,}\b/i)
+  if (!codeMatch) return
+
+  const code = codeMatch[0].toUpperCase()
+  const normalized = (text || '').toLowerCase()
+  const editContext = /(edit|ubah|ganti|update|perbarui|laporan|barang)/i.test(normalized)
+  const photoContext = /(foto|gambar|image)/i.test(normalized)
+
+  if (editContext || photoContext) {
+    activeItemCodeContext.value = code
+  }
+}
+
+function onFileSelected(event) {
+  const file = event.target.files?.[0]
+  selectedFile.value = file || null
+}
+
+async function uploadAndFinalize() {
+  if (!pendingDraft.value || !selectedFile.value) return
+  uploading.value = true
+  try {
+    const form = new FormData()
+    form.append('file', selectedFile.value)
+    const uploadRes = await api.post('/api/uploads/photo', form, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+    const finalizeRes = await api.post(`/api/chat-report-drafts/${pendingDraft.value.draft_id}/finalize`, uploadRes.data)
+    messages.value.push({
+      role: 'ai',
+      text: `Laporan berhasil dibuat dengan foto. Kode unik: ${finalizeRes.data.unique_code}`,
+      time: getTime(),
+    })
+    pendingDraft.value = null
+    selectedFile.value = null
+    emit('data-changed', {
+      toolsUsed: [{ name: 'prepare_report_item', args: {} }],
+      userText: 'laporan selesai dengan foto',
+      aiText: `Laporan berhasil dibuat dengan foto. Kode unik: ${finalizeRes.data.unique_code}`,
+    })
+  } catch (err) {
+    console.error(err)
+    messages.value.push({ role: 'ai', text: 'Gagal upload/finalisasi laporan.', time: getTime() })
+  } finally {
+    uploading.value = false
+    await scrollToBottom()
+  }
+}
+
+async function uploadAndEditPhoto() {
+  if (!pendingPhotoEdit.value || !selectedFile.value) return
+  uploading.value = true
+  try {
+    const form = new FormData()
+    form.append('file', selectedFile.value)
+    await api.post(`/api/items/${pendingPhotoEdit.value.item_id}/photo`, form, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+    messages.value.push({
+      role: 'ai',
+      text: `Foto item ${pendingPhotoEdit.value.unique_code} berhasil diperbarui.`,
+      time: getTime(),
+    })
+    emit('data-changed', {
+      toolsUsed: [],
+      userText: `lihat item ${pendingPhotoEdit.value.unique_code}`,
+      aiText: `Foto item ${pendingPhotoEdit.value.unique_code} berhasil diperbarui.`,
+    })
+    pendingPhotoEdit.value = null
+    selectedFile.value = null
+  } catch (err) {
+    console.error(err)
+    messages.value.push({ role: 'ai', text: 'Gagal memperbarui foto item.', time: getTime() })
+  } finally {
+    uploading.value = false
+    await scrollToBottom()
+  }
+}
+
+async function submitPhotoAction() {
+  if (pendingDraft.value) {
+    await uploadAndFinalize()
+    return
+  }
+  await uploadAndEditPhoto()
+}
+
+async function cancelPhotoAction() {
+  if (pendingDraft.value) {
+    await skipPhotoAndFinalize()
+    return
+  }
+  pendingPhotoEdit.value = null
+  selectedFile.value = null
+}
+
+async function skipPhotoAndFinalize() {
+  if (!pendingDraft.value) return
+  uploading.value = true
+  try {
+    const finalizeRes = await api.post(`/api/chat-report-drafts/${pendingDraft.value.draft_id}/finalize`, {})
+    messages.value.push({
+      role: 'ai',
+      text: `Laporan berhasil dibuat tanpa foto. Kode unik: ${finalizeRes.data.unique_code}`,
+      time: getTime(),
+    })
+    pendingDraft.value = null
+    selectedFile.value = null
+    emit('data-changed', {
+      toolsUsed: [{ name: 'prepare_report_item', args: {} }],
+      userText: 'laporan selesai tanpa foto',
+      aiText: `Laporan berhasil dibuat tanpa foto. Kode unik: ${finalizeRes.data.unique_code}`,
+    })
+  } catch (err) {
+    console.error(err)
+    messages.value.push({ role: 'ai', text: 'Gagal finalisasi laporan.', time: getTime() })
+  } finally {
+    uploading.value = false
     await scrollToBottom()
   }
 }
@@ -422,6 +624,61 @@ defineExpose({ sendMessageExt, setInputOnly });
   border-top: 1.5px solid var(--color-border);
   background: var(--color-surface);
   align-items: center;
+}
+
+.photo-panel {
+  padding: 12px 16px;
+  border-top: 1px solid var(--color-border);
+  background: var(--color-surface);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.photo-title {
+  margin: 0;
+  font-size: 12px;
+}
+
+.photo-input {
+  width: 100%;
+  font-size: 12px;
+}
+
+.photo-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.photo-upload-btn,
+.photo-skip-btn {
+  position: static;
+  min-height: 40px;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: var(--font-weight-bold);
+  cursor: pointer;
+}
+
+.photo-upload-btn {
+  background: var(--gradient-primary);
+  color: var(--color-on-primary);
+  flex: 1 1 180px;
+}
+
+.photo-upload-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.photo-skip-btn {
+  background: transparent;
+  color: var(--color-text-main);
+  border: 1.5px solid var(--color-border);
+  flex: 1 1 140px;
 }
 
 .chat-input {

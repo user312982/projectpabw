@@ -15,15 +15,14 @@ from sqlalchemy import (
 from sqlalchemy.orm import declarative_base, sessionmaker, relationship
 from datetime import datetime, timezone
 import enum
+import random
+import string
 
 DATABASE_URL = "sqlite:///./data/lostfound.db"
 
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
-
-
-# ── Enums ───────────────────────────────────────────────────────────
 
 
 class UserRole(str, enum.Enum):
@@ -52,9 +51,6 @@ class ItemStatus(str, enum.Enum):
     closed = "closed"
 
 
-# ── Models ──────────────────────────────────────────────────────────
-
-
 class User(Base):
     __tablename__ = "users"
 
@@ -68,7 +64,6 @@ class User(Base):
     last_login = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
-    # Relationships
     klaim_processed = relationship("KlaimBarang", back_populates="petugas")
     items = relationship("Item", back_populates="uploader")
 
@@ -98,15 +93,18 @@ class Item(Base):
     category = Column(String(50), nullable=False, default=ItemCategory.lainnya.value)
     type = Column(String(10), nullable=False, default=ItemType.lost.value)
     location = Column(String(255), nullable=True)
-    date_event = Column(DateTime, nullable=True)  # when lost/found
+    date_event = Column(DateTime, nullable=True)
     image_url = Column(String(500), nullable=True)
+    image_mime = Column(String(100), nullable=True)
+    image_size = Column(Integer, nullable=True)
+    image_hash = Column(String(64), nullable=True)
+    image_uploaded_at = Column(DateTime, nullable=True)
     status = Column(String(20), nullable=False, default=ItemStatus.open.value)
     reporter_name = Column(String(255), nullable=True)
     reporter_contact = Column(String(255), nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     uploader_id = Column(Integer, ForeignKey("users.id"), nullable=True)
 
-    # Relationships
     klaims = relationship("KlaimBarang", back_populates="item")
     uploader = relationship("User", back_populates="items")
 
@@ -124,6 +122,10 @@ class Item(Base):
             "location": self.location,
             "date_event": self.date_event.isoformat() if self.date_event else None,
             "image_url": self.image_url,
+            "image_mime": self.image_mime,
+            "image_size": self.image_size,
+            "image_hash": self.image_hash,
+            "image_uploaded_at": self.image_uploaded_at.isoformat() if self.image_uploaded_at else None,
             "status": self.status,
             "reporter_name": self.reporter_name,
             "reporter_contact": self.reporter_contact,
@@ -144,7 +146,6 @@ class KlaimBarang(Base):
     tanggal_klaim = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     petugas_id = Column(Integer, ForeignKey("users.id"), nullable=False)
 
-    # Relationships
     item = relationship("Item", back_populates="klaims")
     petugas = relationship("User", back_populates="klaim_processed")
 
@@ -176,26 +177,19 @@ class TokenBlacklist(Base):
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 
-# ── Helpers ─────────────────────────────────────────────────────────
-
-
 def init_db():
-    """Create all tables if they don't exist and run migrations."""
     import os
 
     os.makedirs("data", exist_ok=True)
     Base.metadata.create_all(bind=engine)
 
-    # Migration: make reporter_name nullable
     _migrate_reporter_name_nullable()
-    # Migration: add is_active, last_login to users
     _migrate_user_new_columns()
-    # Migration: make kontak_pengklaim nullable
     _migrate_kontak_nullable()
+    _migrate_item_photo_columns()
 
 
 def _migrate_reporter_name_nullable():
-    """Ensure reporter_name column on items table is nullable."""
     from sqlalchemy import inspect, text
 
     inspector = inspect(engine)
@@ -232,7 +226,6 @@ def _migrate_reporter_name_nullable():
 
 
 def _migrate_user_new_columns():
-    """Ensure users table has is_active and last_login columns."""
     from sqlalchemy import inspect, text
 
     inspector = inspect(engine)
@@ -246,22 +239,13 @@ def _migrate_user_new_columns():
             conn.execute(text("ALTER TABLE users ADD COLUMN last_login DATETIME"))
 
 
-def get_db():
-    """Dependency: yields a DB session."""
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
-
 def _migrate_kontak_nullable():
-    """Ensure kontak_pengklaim column on klaim_barang table is nullable."""
     from sqlalchemy import inspect, text
 
     inspector = inspect(engine)
     if "klaim_barang" not in inspector.get_table_names():
         return
+
     columns = {col["name"]: col for col in inspector.get_columns("klaim_barang")}
     if "kontak_pengklaim" in columns and not columns["kontak_pengklaim"]["nullable"]:
         with engine.begin() as conn:
@@ -281,14 +265,47 @@ def _migrate_kontak_nullable():
             conn.execute(text("INSERT INTO klaim_barang_new SELECT * FROM klaim_barang"))
             conn.execute(text("DROP TABLE klaim_barang"))
             conn.execute(text("ALTER TABLE klaim_barang_new RENAME TO klaim_barang"))
+            conn.execute(text("CREATE INDEX ix_klaim_barang_id ON klaim_barang(id)"))
             conn.execute(text("PRAGMA foreign_keys=ON"))
 
 
-def generate_unique_code(db):
-    """Helper to generate a random 6-character code."""
-    import string
-    import random
+def _migrate_item_photo_columns():
+    from sqlalchemy import inspect, text
+
+    inspector = inspect(engine)
+    if "items" not in inspector.get_table_names():
+        return
+
+    columns = {col["name"]: col for col in inspector.get_columns("items")}
+    statements = []
+    if "image_mime" not in columns:
+        statements.append("ALTER TABLE items ADD COLUMN image_mime VARCHAR(100)")
+    if "image_size" not in columns:
+        statements.append("ALTER TABLE items ADD COLUMN image_size INTEGER")
+    if "image_hash" not in columns:
+        statements.append("ALTER TABLE items ADD COLUMN image_hash VARCHAR(64)")
+    if "image_uploaded_at" not in columns:
+        statements.append("ALTER TABLE items ADD COLUMN image_uploaded_at DATETIME")
+
+    if statements:
+        with engine.begin() as conn:
+            for stmt in statements:
+                conn.execute(text(stmt))
+
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
+def generate_unique_code(db, prefix: str = "LF", length: int = 6) -> str:
+    """Generate unique item code like LF-ABC123."""
     while True:
-        code = "LF-" + "".join(random.choices(string.ascii_uppercase + string.digits, k=6))
-        if not db.query(Item).filter(Item.unique_code == code).first():
+        random_part = "".join(random.choices(string.ascii_uppercase + string.digits, k=length))
+        code = f"{prefix}-{random_part}"
+        exists = db.query(Item).filter(Item.unique_code == code).first()
+        if not exists:
             return code

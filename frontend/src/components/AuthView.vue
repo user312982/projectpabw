@@ -2,6 +2,7 @@
   <div class="auth-container">
     <div class="auth-card bento-card">
       <div class="brand-header">
+        <img class="brand-logo" src="../assets/logo-itk-lostfound.svg" alt="ITK Lost & Found Logo" />
         <h1>ITK <span class="brand-text">Lost & Found</span></h1>
         <p>Login untuk mengakses sistem</p>
       </div>
@@ -169,6 +170,11 @@ async function handleRegister() {
 .brand-header {
   text-align: center;
   margin-bottom: 30px;
+}
+.brand-logo {
+  width: 56px;
+  height: 56px;
+  margin-bottom: 10px;
 }
 .brand-header h1 {
   font-size: 32px;

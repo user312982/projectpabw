@@ -24,6 +24,24 @@
       <!-- Description -->
       <p class="card-desc" v-if="item.description">{{ item.description }}</p>
 
+      <div class="photo-box">
+        <img
+          v-if="item.image_url && !imageLoadFailed"
+          :src="item.image_url"
+          alt="Foto barang"
+          class="item-photo"
+          @error="onImageError"
+        />
+        <div v-else class="photo-placeholder">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="18" height="18" rx="2" />
+            <circle cx="9" cy="9" r="2" />
+            <path d="M21 15l-5-5L5 21" />
+          </svg>
+          <span>No Photo</span>
+        </div>
+      </div>
+
       <!-- Code Block -->
       <div class="code-block" :class="{ 'copied': copied }" @click.stop="copyCode">
         <svg v-if="!copied" class="code-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -130,7 +148,7 @@
 </template>
 
 <script setup>
-import { computed, ref, nextTick } from 'vue'
+import { computed, ref, nextTick, watch } from 'vue'
 import api from '../services/api.js'
 
 const props = defineProps({
@@ -151,6 +169,15 @@ const editingReporter = ref(false)
 const editReporterName = ref('')
 const reporterInput = ref(null)
 const savingReporter = ref(false)
+const imageLoadFailed = ref(false)
+
+watch(
+  () => props.item.image_url,
+  () => {
+    imageLoadFailed.value = false
+  },
+  { immediate: true }
+)
 
 const canEdit = computed(() => props.user && props.user.id === props.item.uploader_id)
 
@@ -222,6 +249,10 @@ const relativeTime = computed(() => {
   if (diff < 604800) return `${Math.floor(diff / 86400)}d ago`
   return then.toLocaleDateString('en-US', { day: '2-digit', month: 'short' })
 })
+
+function onImageError() {
+  imageLoadFailed.value = true
+}
 </script>
 
 <style scoped>
@@ -266,6 +297,39 @@ const relativeTime = computed(() => {
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+.photo-box {
+  width: 100%;
+  height: 168px;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  background: rgba(255, 248, 236, 0.55);
+  position: relative;
+}
+
+
+.item-photo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.photo-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 /* Header */

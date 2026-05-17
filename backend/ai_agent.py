@@ -2,8 +2,7 @@
 LangGraph AI Agent untuk ITK LostFound dengan RAG.
 
 Tools:
-1. report_lost_item   — Laporkan barang hilang (wajib: nama & lokasi)
-2. report_found_item  — Laporkan barang ditemukan (wajib: nama & lokasi)
+1. prepare_report_item — Siapkan draft laporan hilang/ditemukan
 3. search_items       — Cari barang berdasarkan kata kunci/kategori
 4. list_recent_items  — Lihat laporan terbaru
 5. match_items        — Cari kecocokan barang hilang & ditemukan
@@ -22,11 +21,14 @@ import os
 import re
 import time
 import traceback
+import uuid
+import json
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 from contextvars import ContextVar
 
 current_user_id: ContextVar[Optional[int]] = ContextVar("current_user_id", default=None)
+pending_report_drafts: Dict[str, dict] = {}
 
 # ── Rate Limiter ──────────────────────────────────────────────────
 # Simple rate limiter: max 10 requests per minute
@@ -164,8 +166,108 @@ class DeleteItemInput(BaseModel):
         description="KODE UNIK laporan barang yang ingin dihapus (wajib, contoh: LF-ABCD12)"
     )
 
+class PrepareReportInput(BaseModel):
+    report_type: str = Field(description="Jenis laporan: lost atau found")
+    title: str = Field(description="Nama barang")
+    reporter_name: Optional[str] = Field(default=None)
+    category: str = Field(default="lainnya")
+    description: str = Field(default="")
+    location: str = Field(description="Lokasi hilang/ditemukan")
+    reporter_contact: Optional[str] = Field(default=None)
+    force_create: bool = Field(default=False)
+
 
 # ── Tools ──────────────────────────────────────────────────────────
+
+def _build_pending_draft(
+    report_type: str,
+    title: str,
+    reporter_name: Optional[str],
+    category: str,
+    description: str,
+    location: str,
+    reporter_contact: Optional[str],
+) -> str:
+    draft_id = str(uuid.uuid4())
+    pending_report_drafts[draft_id] = {
+        "id": draft_id,
+        "report_type": report_type,
+        "title": title.strip(),
+        "reporter_name": (reporter_name.strip() if reporter_name else "Anonim"),
+        "category": category,
+        "description": (description or "").strip(),
+        "location": location.strip(),
+        "reporter_contact": (reporter_contact or "").strip(),
+        "uploader_id": current_user_id.get(),
+        "created_at": datetime.now().isoformat(),
+    }
+    return draft_id
+
+
+@tool(args_schema=PrepareReportInput)
+def prepare_report_item(
+    report_type: str,
+    title: str,
+    reporter_name: Optional[str] = None,
+    category: str = "lainnya",
+    description: str = "",
+    location: str = "",
+    reporter_contact: Optional[str] = None,
+    force_create: bool = False,
+) -> str:
+    """Siapkan draft laporan barang hilang/ditemukan dan minta konfirmasi upload foto opsional."""
+    if report_type not in ("lost", "found"):
+        return "[ERROR] report_type harus 'lost' atau 'found'"
+    if not title or not title.strip():
+        return "[ERROR] Nama barang tidak boleh kosong"
+    if not location or not location.strip():
+        return "[ERROR] Lokasi tidak boleh kosong"
+
+    valid_categories = [c.value for c in ItemCategory]
+    if category and category not in valid_categories:
+        return f"[ERROR] Kategori '{category}' tidak valid. Pilih: {', '.join(valid_categories)}"
+
+    db = SessionLocal()
+    try:
+        if not force_create:
+            counterpart = "found" if report_type == "lost" else "lost"
+            candidate_items = db.query(Item).filter(Item.type == counterpart, Item.status == "open").all()
+            title_lower = title.lower()
+            similar_items = []
+            for c in candidate_items:
+                c_title = c.title.lower()
+                title_words = [w for w in title_lower.split() if len(w) > 2]
+                c_words = [w for w in c_title.split() if len(w) > 2]
+                matching_words = set(title_words) & set(c_words)
+                if len(matching_words) >= 1 or title_lower in c_title or c_title in title_lower:
+                    similar_items.append(c)
+            if similar_items:
+                lines = ["[PERHATIAN] Ditemukan barang serupa berdasarkan nama:"]
+                for row in similar_items[:3]:
+                    lines.append(f"- {row.title} | Lokasi: {row.location or '-'} | Kode: {row.unique_code}")
+                lines.append("Jika ingin tetap membuat laporan baru, katakan: lanjutkan laporan baru.")
+                return "\n".join(lines)
+    finally:
+        db.close()
+
+    draft_id = _build_pending_draft(
+        report_type=report_type,
+        title=title,
+        reporter_name=reporter_name,
+        category=category if category in valid_categories else "lainnya",
+        description=description,
+        location=location,
+        reporter_contact=reporter_contact,
+    )
+    return f"[DRAFT_READY] {json.dumps({'draft_id': draft_id, 'title': title.strip(), 'report_type': report_type})}"
+
+
+def get_pending_report_draft(draft_id: str) -> Optional[dict]:
+    return pending_report_drafts.get(draft_id)
+
+
+def pop_pending_report_draft(draft_id: str) -> Optional[dict]:
+    return pending_report_drafts.pop(draft_id, None)
 
 
 @tool(args_schema=ReportLostInput)
@@ -636,7 +738,7 @@ Untuk MELAPORKAN BARANG DITEMUKAN, WAJIB ditanyakan dan diisi:
 
 ### 3. BEDAKAN INTENSI USER:
 - "saya mau cari", "carikan", "apakah ada" → GUNAKAN `search_items`
-- "saya mau lapor", "saya kehilangan", "saya menemukan" → GUNAKAN `report_lost_item` / `report_found_item`
+- "saya mau lapor", "saya kehilangan", "saya menemukan" → GUNAKAN `prepare_report_item` dengan report_type lost/found
 - "saya mau ubah", "perbarui", "update" → GUNAKAN `update_item_tool`
 - "saya mau hapus", "hapus" → GUNAKAN `delete_item_tool`
 - "cocokkan", "match", "kecocokan" → GUNAKAN `match_items`
@@ -656,12 +758,12 @@ Untuk MELAPORKAN BARANG DITEMUKAN, WAJIB ditanyakan dan diisi:
 - Jika user bilang "itu", "tersebut", atau "dia", pahami apa yang dimaksud dari chat sebelumnya.
 
 ### 6. AUTO-MATCH SEBELUM LAPORAN:
-- `report_lost_item` dan `report_found_item` akan otomatis mencari barang serupa (berdasarkan NAMA BARANG saja) SEBELUM membuat laporan.
+- `prepare_report_item` akan otomatis mencari barang serupa (berdasarkan NAMA BARANG saja) sebelum membuat draft.
 - Jika ada kecocokan, sistem akan mengembalikan daftar barang serupa dan LAPORAN TIDAK JADI DIBUAT.
 - Jika ada kecocokan, informasikan ke user: "Saya menemukan X barang serupa di database. Apakah ini barang yang Anda maksud?"
 - Jika user konfirmasi "iya", "ya", "benar", "itu", "yang itu" (artinya ini barang yang dimaksud), arahkan ke kontak pelapor/penemu.
 - JIKA USER INGIN MELANJUTKAN / MEMBUAT LAPORAN BARU (bilang: "lanjutkan", "iya lanjut", "ya lanjut", "ya tetap", "bukan", "tetap buat", "tetap lanjut", "continue", "skip", "abaikan", atau menyatakan ingin membuat laporan baru), MAKA:
-  - Panggil tool `report_lost_item` atau `report_found_item` lagi DENGAN parameter `force_create: true`
+  - Panggil tool `prepare_report_item` lagi dengan `force_create: true` jika user tetap ingin lanjut.
   - Ini akan membuat laporan baru tanpa mengecek kecocokan lagi
 - Tool akan otomatis mencari kecocokan saat pertama kali dipanggil, jadi cukup panggil tool dengan `force_create: true` saat user ingin melanjutkan.
 
@@ -674,8 +776,7 @@ Untuk MELAPORKAN BARANG DITEMUKAN, WAJIB ditanyakan dan diisi:
 - Gunakan bahasa Indonesia yang sederhana dan jelas
 
 ## 🔧 TOOLS YANG TERSEDIA:
-- `report_lost_item` - Untuk melaporkan barang hilang
-- `report_found_item` - Untuk melaporkan barang ditemukan
+- `prepare_report_item` - Menyiapkan draft laporan hilang/ditemukan
 - `search_items` - Untuk mencari barang (gunakan RAG semantic search)
 - `list_recent_items` - Untuk melihat laporan terbaru
 - `match_items` - Untuk mencocokkan barang hilang & ditemukan
@@ -686,8 +787,7 @@ Untuk MELAPORKAN BARANG DITEMUKAN, WAJIB ditanyakan dan diisi:
 # ── Tools List ─────────────────────────────────────────────────────
 
 tools = [
-    report_lost_item,
-    report_found_item,
+    prepare_report_item,
     search_items,
     list_recent_items,
     match_items,
@@ -786,6 +886,7 @@ async def process_chat(message: str, chat_history: list = None, user_id: int = N
         messages.append(response)
 
         tools_used = []
+        chat_action = None
 
         # If LLM decided to call tools
         if hasattr(response, "tool_calls") and response.tool_calls:
@@ -831,6 +932,13 @@ async def process_chat(message: str, chat_history: list = None, user_id: int = N
                         except Exception as e:
                             tool_result = f"[ERROR] Gagal mengeksekusi tool: {str(e)}"
                         break
+                if isinstance(tool_result, str) and tool_result.startswith("[DRAFT_READY]"):
+                    try:
+                        payload = json.loads(tool_result.replace("[DRAFT_READY]", "").strip())
+                        chat_action = {"type": "request_photo_upload", **payload}
+                        tool_result = "Draft laporan sudah siap. Apakah Anda ingin menambahkan foto? (opsional)"
+                    except Exception:
+                        pass
 
                 messages.append(
                     ToolMessage(
@@ -840,10 +948,10 @@ async def process_chat(message: str, chat_history: list = None, user_id: int = N
 
             # Second call: LLM provides final answer based on tool results
             final_response = await llm_with_tools.ainvoke(messages)
-            return final_response.content, tools_used
+            return final_response.content, tools_used, chat_action
 
         # If no tool called, return directly
-        return response.content, []
+        return response.content, [], None
 
     except Exception as e:
         traceback.print_exc()
@@ -854,14 +962,17 @@ async def process_chat(message: str, chat_history: list = None, user_id: int = N
                 "Maaf, ada kendala teknis saat memproses. "
                 "Coba ubah sedikit cara Anda bertanya ya 😊",
                 [],
+                None,
             )
         if "rate limit" in error_str:
             return (
                 "Server AI sedang sibuk (Rate Limit). "
                 "Mohon tunggu beberapa saat sebelum mencoba lagi ⏳",
                 [],
+                None,
             )
         return (
             "Maaf, sistem sedang kelebihan beban. Mohon dicoba beberapa saat lagi 🙏",
             [],
+            None,
         )

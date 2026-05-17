@@ -2,15 +2,7 @@
   <div class="user-view" :class="{ 'has-searched': hasSearched }">
     <!-- Logo -->
     <div class="logo-container">
-      <svg class="logo-icon" width="32" height="32" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <!-- Outer circle -->
-        <circle cx="32" cy="32" r="30" stroke="#546B41" stroke-width="3" fill="#FFF8EC"/>
-        <!-- Magnifying glass -->
-        <circle cx="26" cy="26" r="12" stroke="#546B41" stroke-width="3" fill="none"/>
-        <line x1="35" y1="35" x2="44" y2="44" stroke="#546B41" stroke-width="3" stroke-linecap="round"/>
-        <!-- Inner dot representing found item -->
-        <circle cx="26" cy="26" r="4" fill="#99AD7A"/>
-      </svg>
+      <img class="logo-icon" src="../assets/logo-itk-lostfound.svg" alt="ITK Lost & Found Logo" />
       <div class="logo-text">
         <span class="logo-title">ITK</span>
         <span class="logo-subtitle">Lost & Found</span>
@@ -107,37 +99,93 @@ const hasSearched = ref(false)
 const initialQuery = ref('')
 const allItems = ref([])
 const chatComponent = ref(null)
+const activeQueryParams = ref({})
 
-async function fetchItems() {
+async function fetchItems(params = activeQueryParams.value) {
   try {
-    const res = await api.get('/api/items')
+    const normalizedParams = params || {}
+    const res = await api.get('/api/items', { params: normalizedParams })
+    activeQueryParams.value = { ...normalizedParams }
     allItems.value = res.data
   } catch (e) {
     console.error('Failed to fetch items', e)
   }
 }
 
-async function handleDataChanged(toolsUsed) {
-  if (toolsUsed && toolsUsed.length > 0) {
-    const searchTool = toolsUsed.find(t => t.name === 'search_items' || t.name === 'match_items');
-    if (searchTool) {
-      const args = searchTool.args || {};
-      const params = {};
-      if (args.keyword) params.search = args.keyword;
-      if (args.category) params.category = args.category;
-      if (args.type) params.type = args.type;
-      
-      try {
-        const res = await api.get('/api/items', { params })
-        allItems.value = res.data
-      } catch (e) {
-        console.error(e)
-      }
-      return;
+function extractIntentFilterFromText(text) {
+  const normalized = (text || '').toLowerCase()
+  const wantsLost = /\bhilang\b|\blost\b/.test(normalized)
+  const wantsFound = /\bditemukan\b|\bfound\b/.test(normalized)
+  const wantsRecent = /\bterbaru\b|\brecent\b/.test(normalized)
+  const params = {}
+  if (wantsLost && !wantsFound) params.type = 'lost'
+  if (wantsFound && !wantsLost) params.type = 'found'
+  return { params, wantsRecent }
+}
+
+async function handleDataChanged(payload) {
+  const toolsUsed = Array.isArray(payload) ? payload : (payload?.toolsUsed || [])
+  const userText = Array.isArray(payload) ? '' : (payload?.userText || '')
+
+  const searchTool = toolsUsed.find(t => t.name === 'search_items')
+  if (searchTool) {
+    const args = searchTool.args || {}
+    const params = {}
+    if (args.keyword) params.search = args.keyword
+    if (args.category) params.category = args.category
+    if (args.type) params.type = args.type
+    try {
+      await fetchItems(params)
+    } catch (e) {
+      console.error(e)
     }
+    return
   }
-  
-  // Default: fetch all
+
+  const matchTool = toolsUsed.find(t => t.name === 'match_items')
+  if (matchTool) {
+    const args = matchTool.args || {}
+    const params = {}
+    if (args.keyword) params.search = args.keyword
+    try {
+      await fetchItems(params)
+    } catch (e) {
+      console.error(e)
+    }
+    return
+  }
+
+  const listTool = toolsUsed.find(t => t.name === 'list_recent_items')
+  if (listTool) {
+    const { params } = extractIntentFilterFromText(userText)
+    try {
+      await fetchItems(params)
+    } catch (e) {
+      console.error(e)
+    }
+    return
+  }
+
+  if (toolsUsed && toolsUsed.length > 0) {
+    try {
+      const { params } = extractIntentFilterFromText(userText)
+      await fetchItems(params)
+    } catch (e) {
+      console.error(e)
+    }
+    return
+  }
+
+  const { params, wantsRecent } = extractIntentFilterFromText(userText)
+  if (Object.keys(params).length > 0 || wantsRecent) {
+    try {
+      await fetchItems(params)
+    } catch (e) {
+      console.error(e)
+    }
+    return
+  }
+
   fetchItems();
 }
 
@@ -149,7 +197,8 @@ function handleCodeCopied(code) {
 function handleInitialSearch() {
   if (!initialQuery.value.trim()) return
   hasSearched.value = true
-  fetchItems() // Fetch all default
+  activeQueryParams.value = {}
+  fetchItems()
   // Wait for AiChat to mount and send the initial query
   setTimeout(() => {
     if (chatComponent.value && chatComponent.value.sendMessageExt) {
@@ -203,6 +252,8 @@ onMounted(() => {
 
 .logo-icon {
   flex-shrink: 0;
+  width: 32px;
+  height: 32px;
 }
 
 .logo-text {

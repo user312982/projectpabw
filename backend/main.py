@@ -22,11 +22,13 @@ from datetime import datetime, timedelta, timezone
 from typing import List, Optional
 
 import hashlib
+import json
 import uuid
 
 from ai_agent import get_pending_report_draft, pop_pending_report_draft, process_chat
 from database import (
     Item,
+    ItemEvent,
     ItemCategory,
     ItemStatus,
     ItemType,
@@ -106,13 +108,14 @@ app.add_middleware(
 @app.on_event("startup")
 def on_startup():
     init_db()
-    # Skip RAG reindex di startup (membutuhkan download model 79MB, lambat)
-    # try:
-    #     rag_system.reindex_all()
-    #     print("RAG system initialized and reindexed successfully")
-    # except Exception as e:
-    #     print(f"RAG initialization warning: {e}")
-    #     print("Chatbot will work with fallback search instead of RAG")
+    enable_rag = os.getenv("ENABLE_RAG", "false").lower() in ("1", "true", "yes", "on")
+    if enable_rag:
+        try:
+            rag_system.reindex_all()
+            print("RAG system initialized and reindexed successfully")
+        except Exception as e:
+            print(f"RAG initialization warning: {e}")
+            print("Chatbot will work with fallback search instead of RAG")
 
 
 # ── Auth Helpers ────────────────────────────────────────────────────
@@ -291,6 +294,32 @@ class FinalizeDraftRequest(BaseModel):
     image_mime: Optional[str] = None
     image_size: Optional[int] = None
     image_hash: Optional[str] = None
+
+
+class VerifyReturnRequest(BaseModel):
+    note: Optional[str] = None
+
+
+def _log_item_event(
+    db: Session,
+    item: Item,
+    event_type: str,
+    event_label: str,
+    user: Optional[User] = None,
+    event_note: Optional[str] = None,
+    metadata: Optional[dict] = None,
+):
+    event = ItemEvent(
+        item_id=item.id,
+        event_type=event_type,
+        event_label=event_label,
+        event_note=event_note,
+        actor_id=(user.id if user else None),
+        actor_name_snapshot=(user.full_name if user else None),
+        metadata_json=(json.dumps(metadata, ensure_ascii=True) if metadata else None),
+        created_at=datetime.now(timezone.utc),
+    )
+    db.add(event)
 
 
 # ── Routes: Auth ────────────────────────────────────────────────────
@@ -577,6 +606,15 @@ def finalize_chat_report_draft(
         uploader_id=user.id,
     )
     db.add(item)
+    db.flush()
+    _log_item_event(
+        db,
+        item,
+        event_type="item_created",
+        event_label="Laporan dibuat",
+        user=user,
+        metadata={"type": item.type, "category": item.category, "status": item.status},
+    )
     db.commit()
     db.refresh(item)
     pop_pending_report_draft(draft_id)
@@ -659,6 +697,15 @@ def create_item(
         uploader_id=user.id,
     )
     db.add(item)
+    db.flush()
+    _log_item_event(
+        db,
+        item,
+        event_type="item_created",
+        event_label="Laporan dibuat",
+        user=user,
+        metadata={"type": item.type, "category": item.category, "status": item.status},
+    )
     db.commit()
     db.refresh(item)
     return item.to_dict()
@@ -690,9 +737,21 @@ def update_item(
         except ValueError:
             raise HTTPException(status_code=400, detail="Format tanggal tidak valid")
 
+    changed_fields = []
     for key, value in update_data.items():
+        if getattr(item, key) != value:
+            changed_fields.append(key)
         setattr(item, key, value)
 
+    if changed_fields:
+        _log_item_event(
+            db,
+            item,
+            event_type="item_updated",
+            event_label="Laporan diedit",
+            user=user,
+            metadata={"changed_fields": changed_fields},
+        )
     db.commit()
     db.refresh(item)
     return item.to_dict()
@@ -731,6 +790,14 @@ async def update_item_photo(
     item.image_size = len(data)
     item.image_hash = file_hash
     item.image_uploaded_at = datetime.now(timezone.utc)
+    _log_item_event(
+        db,
+        item,
+        event_type="photo_updated",
+        event_label="Foto item diperbarui",
+        user=user,
+        metadata={"mime": file.content_type, "size": len(data)},
+    )
     db.commit()
     db.refresh(item)
     return item.to_dict()
@@ -759,7 +826,16 @@ def update_item_status(
             detail=f"Status tidak valid. Gunakan: {[s.value for s in ItemStatus]}",
         )
 
+    previous_status = item.status
     item.status = data.status
+    _log_item_event(
+        db,
+        item,
+        event_type="status_changed",
+        event_label="Status item diubah",
+        user=user,
+        metadata={"from": previous_status, "to": item.status},
+    )
     db.commit()
     db.refresh(item)
     return item.to_dict()
@@ -802,8 +878,8 @@ def claim_item_by_code(
             status_code=404, detail="Item tidak ditemukan dengan kode tersebut"
         )
 
-    if item.status == ItemStatus.claimed.value:
-        raise HTTPException(status_code=400, detail="Item sudah diklaim sebelumnya")
+    if item.status in [ItemStatus.claimed.value, ItemStatus.returned.value]:
+        raise HTTPException(status_code=400, detail="Item sudah diproses klaim sebelumnya")
 
     # Create klaim record
     klaim = KlaimBarang(
@@ -817,6 +893,18 @@ def claim_item_by_code(
 
     # Update item status to claimed
     item.status = ItemStatus.claimed.value
+    _log_item_event(
+        db,
+        item,
+        event_type="item_claimed",
+        event_label="Item diklaim",
+        user=user,
+        metadata={
+            "claimer_name": data.nama_pengklaim,
+            "claimer_nim": data.nim_pengklaim,
+            "claimer_contact": data.kontak_pengklaim,
+        },
+    )
     db.commit()
     db.refresh(klaim)
 
@@ -835,8 +923,8 @@ def claim_item(
     if not item:
         raise HTTPException(status_code=404, detail="Item tidak ditemukan")
 
-    if item.status == ItemStatus.claimed.value:
-        raise HTTPException(status_code=400, detail="Item sudah diklaim")
+    if item.status in [ItemStatus.claimed.value, ItemStatus.returned.value]:
+        raise HTTPException(status_code=400, detail="Item sudah diproses klaim")
 
     # Create klaim record
     klaim = KlaimBarang(
@@ -850,6 +938,18 @@ def claim_item(
 
     # Update item status to claimed
     item.status = ItemStatus.claimed.value
+    _log_item_event(
+        db,
+        item,
+        event_type="item_claimed",
+        event_label="Item diklaim",
+        user=user,
+        metadata={
+            "claimer_name": data.nama_pengklaim,
+            "claimer_nim": data.nim_pengklaim,
+            "claimer_contact": data.kontak_pengklaim,
+        },
+    )
     db.commit()
     db.refresh(klaim)
 
@@ -870,6 +970,72 @@ def get_item_claims(item_id: int, db: Session = Depends(get_db)):
         .all()
     )
     return [k.to_dict() for k in klaims]
+
+
+@app.get("/api/items/{item_id}/timeline")
+def get_item_timeline(item_id: int, db: Session = Depends(get_db)):
+    """Get timeline events for an item."""
+    item = db.query(Item).filter(Item.id == item_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="Item tidak ditemukan")
+
+    events = (
+        db.query(ItemEvent)
+        .filter(ItemEvent.item_id == item_id)
+        .order_by(ItemEvent.created_at.desc())
+        .all()
+    )
+
+    if not events and item.created_at:
+        return [{
+            "id": 0,
+            "item_id": item.id,
+            "event_type": "item_created",
+            "event_label": "Laporan dibuat",
+            "event_note": None,
+            "actor_id": item.uploader_id,
+            "actor_name_snapshot": item.uploader.full_name if item.uploader else None,
+            "metadata_json": None,
+            "created_at": item.created_at.isoformat(),
+        }]
+
+    return [e.to_dict() for e in events]
+
+
+@app.post("/api/items/{item_id}/verify-return")
+def verify_item_return(
+    item_id: int,
+    data: VerifyReturnRequest,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_petugas),
+):
+    """Verify item handover and mark it as returned."""
+    item = db.query(Item).filter(Item.id == item_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="Item tidak ditemukan")
+    if item.status != ItemStatus.claimed.value:
+        raise HTTPException(status_code=400, detail="Item hanya bisa diverifikasi jika statusnya claimed")
+
+    item.status = ItemStatus.returned.value
+    _log_item_event(
+        db,
+        item,
+        event_type="item_verified",
+        event_label="Klaim diverifikasi petugas",
+        user=user,
+        event_note=data.note,
+    )
+    _log_item_event(
+        db,
+        item,
+        event_type="item_returned",
+        event_label="Item dikembalikan ke pemilik",
+        user=user,
+        event_note=data.note,
+    )
+    db.commit()
+    db.refresh(item)
+    return item.to_dict()
 
 
 @app.get("/api/claims")
@@ -897,7 +1063,7 @@ def get_dashboard_summary(db: Session = Depends(get_db)):
     total_found = db.query(Item).filter(Item.type == "found").count()
     total_open = db.query(Item).filter(Item.status == "open").count()
     total_claimed = db.query(Item).filter(Item.status == "claimed").count()
-    total_closed = db.query(Item).filter(Item.status == "closed").count()
+    total_closed = db.query(Item).filter(Item.status.in_(["closed", "returned"])).count()
 
     return {
         "total_lost": total_lost,

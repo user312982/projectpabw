@@ -2,7 +2,7 @@
   <div class="user-view" :class="{ 'has-searched': hasSearched }">
     <!-- Logo -->
     <div class="logo-container">
-      <img class="logo-icon" src="../assets/logo-itk-lostfound.svg" alt="ITK Lost & Found Logo" />
+      <img class="logo-icon" src="../assets/itk/logo-itk-white-notext.webp" alt="Logo Institut Teknologi Kalimantan" />
       <div class="logo-text">
         <span class="logo-title">ITK</span>
         <span class="logo-subtitle">Lost & Found</span>
@@ -22,8 +22,10 @@
     <!-- Initial Search Engine View -->
     <div class="search-engine-view" v-if="!hasSearched">
       <div class="brand">
+        <img class="hero-itk-logo" src="../assets/itk/logo-itk-with-gear.webp" alt="Logo Institut Teknologi Kalimantan" />
+        <div class="campus-pill">Institut Teknologi Kalimantan</div>
         <h1>ITK <span class="brand-text">Lost & Found</span></h1>
-        <p>Asisten AI Pencarian Barang Hilang & Ditemukan</p>
+        <p>Asisten AI Pencarian Barang Hilang & Ditemukan di lingkungan kampus ITK</p>
       </div>
       
       <form @submit.prevent="handleInitialSearch" class="search-form">
@@ -51,7 +53,7 @@
            <h2>Hasil Pencarian & Laporan Terkini</h2>
            <p>Berikut adalah data yang ada di sistem, AI akan memandu Anda di sebelah kanan.</p>
         </div>
-        <ItemList :items="allItems" :user="user" @code-copied="handleCodeCopied" @updated="fetchItems" />
+        <ItemList :items="allItems" :user="user" :enable-detail-drawer="true" @code-copied="handleCodeCopied" @updated="fetchItems" />
       </div>
       <div class="content-right">
         <!-- AiChat Component -->
@@ -217,43 +219,61 @@ onMounted(() => {
   height: 100vh;
   overflow: hidden;
   position: relative;
-  background: var(--bg-color); /* inherits gradient or dark bg */
+  background: var(--bg-color);
   color: var(--color-text-main);
   display: flex;
   flex-direction: column;
 }
 
+.user-view::before {
+  content: '';
+  position: absolute;
+  right: -180px;
+  bottom: -120px;
+  width: min(720px, 70vw);
+  aspect-ratio: 1148 / 584;
+  background-image: url('../assets/itk/gear-blue-half.webp');
+  background-size: contain;
+  background-repeat: no-repeat;
+  opacity: 0.08;
+  pointer-events: none;
+}
+
 .user-view.has-searched {
-  padding: 20px;
+  padding: 24px 32px 32px;
 }
 
 /* Logo Styles */
 .logo-container {
   position: absolute;
-  top: 16px;
-  left: 20px;
+  top: 24px;
+  left: 32px;
   display: flex;
   align-items: center;
   gap: 12px;
   z-index: 10;
-  background: rgba(255, 248, 236, 0.9);
+  background: var(--color-surface);
   padding: 8px 16px;
   border-radius: 12px;
-  border: 1px solid #DCCCAC;
-  backdrop-filter: blur(8px);
-  box-shadow: 0 2px 8px rgba(84, 107, 65, 0.1);
+  border: 1px solid var(--color-border);
+  border-left: 4px solid var(--color-accent);
+  box-shadow: var(--shadow-sm);
   transition: all 0.3s ease;
 }
 
 .logo-container:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 16px rgba(84, 107, 65, 0.15);
+  box-shadow: var(--shadow-md);
 }
 
 .logo-icon {
   flex-shrink: 0;
-  width: 32px;
-  height: 32px;
+  width: 34px;
+  height: 40px;
+  object-fit: contain;
+  padding: 4px;
+  border-radius: 10px;
+  background: var(--color-primary);
 }
 
 .logo-text {
@@ -265,21 +285,21 @@ onMounted(() => {
 .logo-title {
   font-size: 16px;
   font-weight: 700;
-  color: #546B41;
-  letter-spacing: -0.02em;
+  color: var(--color-primary);
+  letter-spacing: 0;
 }
 
 .logo-subtitle {
   font-size: 11px;
   font-weight: 500;
-  color: #99AD7A;
+  color: var(--color-accent);
   letter-spacing: 0.02em;
 }
 
 .guide-btn {
   position: absolute;
-  top: 20px;
-  right: 140px;
+  top: 28px;
+  right: 162px;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -297,8 +317,8 @@ onMounted(() => {
 
 .logout-btn {
   position: absolute;
-  top: 20px;
-  right: 20px;
+  top: 28px;
+  right: 32px;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -323,15 +343,38 @@ onMounted(() => {
   align-items: center;
   padding: 20px;
   animation: fadeIn 0.8s ease;
+  position: relative;
+  z-index: 1;
 }
 .brand {
   text-align: center;
-  margin-bottom: 40px;
+  margin-bottom: 36px;
+}
+.hero-itk-logo {
+  display: block;
+  width: min(260px, 72vw);
+  height: 112px;
+  object-fit: contain;
+  margin: 0 auto 8px;
+}
+.campus-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 12px;
+  margin-bottom: 14px;
+  border-radius: var(--radius-pill);
+  border: 1px solid rgba(11, 97, 170, 0.16);
+  background: var(--color-accent-subtle);
+  color: var(--color-primary);
+  font-size: 12px;
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.02em;
 }
 .brand h1 {
   font-size: 72px;
   margin: 0;
-  letter-spacing: -3px;
+  letter-spacing: 0;
 }
 .brand-text { color: var(--color-primary); }
 .brand p { opacity: 0.8; font-size: 18px; margin-top: 15px; font-weight: 500;}
@@ -363,16 +406,19 @@ onMounted(() => {
   padding: 24px 24px 24px 64px;
   font-size: 18px;
   border-radius: 40px;
-  border: 1.5px solid rgba(255,255,255,0.2);
-  background: var(--color-surface); border: 1px solid var(--color-border);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
   color: var(--color-text-main);
   outline: none;
   font-family: inherit;
-  box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-  backdrop-filter: blur(10px);
+  box-shadow: var(--shadow-lg);
   transition: all 0.3s;
 }
-.search-input:focus { border-color: var(--color-primary); background: var(--color-surface); }
+.search-input:focus {
+  border-color: var(--color-primary);
+  background: var(--color-surface);
+  box-shadow: 0 0 0 4px rgba(10, 97, 170, 0.14), var(--shadow-lg);
+}
 .search-input::placeholder { color: var(--color-text-muted); }
 
 .search-actions {
@@ -389,7 +435,7 @@ onMounted(() => {
   border: none;
   transition: all 0.2s;
 }
-.btn-primary { background: var(--gradient-primary); color: var(--color-on-primary); }
+.btn-primary { background: var(--color-primary); color: var(--color-on-primary); }
 .btn-primary:active { transform: scale(0.95); }
 .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
 .btn-outline { background: transparent; border: 1px solid var(--color-border); color: var(--color-text-main); backdrop-filter: blur(5px);}
@@ -398,39 +444,64 @@ onMounted(() => {
 /* Active Chat View */
 .active-chat-view {
   display: flex;
-  gap: 16px;
-  padding-top: 52px; /* Space for buttons */
+  gap: 24px;
+  padding-top: 84px;
   flex: 1;
   min-height: 0;
 }
 .content-left {
   flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
   background: var(--color-surface);
   backdrop-filter: blur(12px);
-  border-radius: 20px;
-  padding: 18px 24px;
-  overflow-y: auto;
+  border-radius: 22px;
+  padding: 24px 28px;
+  overflow: hidden;
   border: 1px solid var(--color-border);
+  border-top: 4px solid var(--color-accent);
   animation: slideIn 0.5s ease;
+  position: relative;
+  z-index: 1;
 }
 .content-header {
-  margin-bottom: 16px;
-  padding-bottom: 14px;
+  flex-shrink: 0;
+  margin-bottom: 22px;
+  padding-bottom: 18px;
   border-bottom: 1px solid var(--color-border);
 }
 .content-header h2 {
   margin: 0 0 8px 0;
-  font-size: 28px;
-  letter-spacing: -1px;
+  font-size: 26px;
+  letter-spacing: 0;
+  line-height: 1.16;
+  width: fit-content;
+  padding-bottom: 10px;
+  position: relative;
+  color: var(--color-primary);
+}
+.content-header h2::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 4px;
+  background: var(--color-accent);
+  border-radius: var(--radius-pill);
 }
 .content-header p {
   margin: 0;
   opacity: 0.7;
+  max-width: 680px;
 }
 
 .content-right {
   width: 420px;
   flex-shrink: 0;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -459,7 +530,7 @@ onMounted(() => {
   animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
   box-shadow: 0 20px 60px rgba(0,0,0,0.5);
 }
-.modal-content h2 { margin-top: 0; font-size: 24px; letter-spacing: -0.5px; margin-bottom: 16px;}
+.modal-content h2 { margin-top: 0; font-size: 24px; letter-spacing: 0; margin-bottom: 16px;}
 .modal-content p { opacity: 0.8; line-height: 1.5; }
 .guide-list { margin: 24px 0; padding-left: 20px; line-height: 1.8; opacity: 0.9;}
 .guide-list li { margin-bottom: 8px; }
@@ -471,11 +542,39 @@ onMounted(() => {
 @keyframes slideUp { from { opacity: 0; transform: translateY(40px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
 
 @media (max-width: 1024px) {
-  .active-chat-view { flex-direction: column; }
+  .user-view.has-searched { padding: 16px; }
+  .active-chat-view { flex-direction: column; gap: 18px; padding-top: 82px; }
   .content-right { width: 100%; height: 500px; }
-  .guide-btn { top: 10px; right: 100px; padding: 8px 12px;}
-  .logout-btn { top: 10px; right: 10px; padding: 8px 12px;}
+  .logo-container { top: 14px; left: 16px; }
+  .guide-btn { top: 16px; right: 116px; padding: 8px 12px;}
+  .logout-btn { top: 16px; right: 16px; padding: 8px 12px;}
   .brand h1 { font-size: 48px; }
   .search-input { padding: 18px 20px 18px 50px; font-size: 16px; }
+}
+
+@media (max-width: 640px) {
+  .logo-container {
+    padding: 7px 10px;
+    gap: 8px;
+  }
+  .logo-icon {
+    width: 28px;
+    height: 34px;
+  }
+  .logo-title { font-size: 14px; }
+  .logo-subtitle { display: none; }
+  .guide-btn span,
+  .logout-btn span {
+    display: none;
+  }
+  .guide-btn { right: 70px; }
+  .active-chat-view { padding-top: 76px; }
+  .content-left {
+    border-radius: 18px;
+    padding: 20px;
+  }
+  .content-header h2 {
+    font-size: 22px;
+  }
 }
 </style>

@@ -80,58 +80,56 @@ const cards = computed(() => [
   padding: 28px 28px 24px;
   border-radius: var(--radius-lg);
   min-height: 180px;
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  background: var(--color-surface);
+  transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
   animation: slideUp 0.5s ease both;
   position: relative;
   overflow: hidden;
 }
 
 .card::before {
-  content: '';
-  position: absolute;
-  top: -40%;
-  right: -30%;
-  width: 200px;
-  height: 200px;
-  background: rgba(255,255,255,0.08);
-  border-radius: 50%;
-  pointer-events: none;
+  display: none;
 }
 
 .card:hover {
   transform: translateY(-6px);
-  box-shadow: 0 12px 28px rgba(84, 107, 65, 0.2);
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.12);
 }
 
 .bg-lost { 
-  background: linear-gradient(135deg, #FFF8EC 0%, #E8DFC8 100%); 
-  color: #546B41; 
-  border: 1px solid rgba(255,255,255,0.6);
-  box-shadow: 0 8px 24px rgba(220, 204, 172, 0.3);
+  background: var(--color-surface); 
+  color: var(--color-primary); 
+  border: 1px solid rgba(11, 97, 170, 0.14);
+  border-left: 4px solid var(--color-primary);
+  box-shadow: 0 8px 24px rgba(11, 97, 170, 0.1);
 }
 .bg-found { 
-  background: linear-gradient(135deg, #99AD7A 0%, #B5C69A 100%); 
-  color: #2c3a20; 
-  border: 1px solid rgba(255,255,255,0.4);
-  box-shadow: 0 8px 24px rgba(153, 173, 122, 0.3);
+  background: var(--color-surface); 
+  color: #14532D; 
+  border: 1px solid rgba(22, 163, 74, 0.18);
+  border-left: 4px solid var(--color-success);
+  box-shadow: 0 8px 24px rgba(22, 163, 74, 0.12);
 }
 .bg-accent { 
-  background: linear-gradient(135deg, #546B41 0%, #3d4f2f 100%); 
-  color: #FFF8EC;
-  border: 1px solid rgba(84, 107, 65, 0.5);
-  box-shadow: 0 8px 24px rgba(84, 107, 65, 0.3);
+  background: var(--color-surface); 
+  color: var(--color-primary);
+  border: 1px solid rgba(11, 97, 170, 0.18);
+  border-left: 4px solid var(--color-primary);
+  box-shadow: 0 8px 24px rgba(11, 97, 170, 0.1);
 }
 .bg-claimed { 
-  background: linear-gradient(135deg, #E6CCB2 0%, #DDB892 100%); 
-  color: #5c4033; 
-  border: 1px solid rgba(255,255,255,0.5);
-  box-shadow: 0 8px 24px rgba(221, 184, 146, 0.3);
+  background: var(--color-surface); 
+  color: #7C2D12; 
+  border: 1px solid rgba(245, 183, 89, 0.3);
+  border-left: 4px solid var(--color-accent);
+  box-shadow: 0 8px 24px rgba(245, 183, 90, 0.18);
 }
 .bg-gray-card { 
-  background: linear-gradient(135deg, #FFFFFF 0%, #F5F5F5 100%); 
-  color: #546B41; 
-  border: 1px solid #DCCCAC;
-  box-shadow: 0 8px 24px rgba(220, 204, 172, 0.15);
+  background: var(--color-surface); 
+  color: var(--color-neutral-dark); 
+  border: 1px solid var(--color-border);
+  border-left: 4px solid var(--color-neutral-dark);
+  box-shadow: var(--shadow-md);
 }
 
 .card-top {
@@ -147,17 +145,26 @@ const cards = computed(() => [
   width: 40px;
   height: 40px;
   border-radius: 12px;
-  background: rgba(84, 107, 65, 0.12);
+  background: rgba(11, 97, 170, 0.1);
   flex-shrink: 0;
 }
 
 .bg-accent .card-icon,
 .bg-primary .card-icon {
-  background: rgba(255, 248, 236, 0.2);
+  background: rgba(10, 97, 170, 0.12);
+  color: var(--color-primary);
+}
+
+.bg-found .card-icon {
+  background: rgba(25, 135, 84, 0.12);
+}
+
+.bg-claimed .card-icon {
+  background: var(--color-accent-subtle);
 }
 
 .bg-gray-card .card-icon {
-  background: rgba(84, 107, 65, 0.1);
+  background: rgba(55, 65, 81, 0.08);
 }
 
 .card-title {
@@ -172,7 +179,7 @@ const cards = computed(() => [
   font-size: clamp(3.5rem, 5vw, 5.5rem);
   font-weight: var(--font-weight-heavy);
   line-height: 0.85;
-  letter-spacing: -0.05em;
+  letter-spacing: 0;
   margin-top: 20px;
   position: relative;
   z-index: 1;

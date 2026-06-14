@@ -66,14 +66,14 @@
           </div>
         </div>
 
-        <div v-if="searchResult.status === 'claimed'" class="already-claimed">
+        <div v-if="searchResult.status === 'claimed' || searchResult.status === 'returned'" class="already-claimed">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
           </svg>
-          <span>This item has already been claimed</span>
+          <span>This item has already been processed</span>
         </div>
 
-        <form v-if="searchResult.status !== 'claimed'" @submit.prevent="submitClaim" class="claim-form">
+        <form v-if="searchResult.status !== 'claimed' && searchResult.status !== 'returned'" @submit.prevent="submitClaim" class="claim-form">
           <div class="form-divider">
             <span>Pickup Confirmation</span>
           </div>
@@ -116,7 +116,7 @@
           <p v-if="claimError" class="error">{{ claimError }}</p>
         </form>
 
-        <div v-if="searchResult.status === 'claimed'" class="form-actions">
+        <div v-if="searchResult.status === 'claimed' || searchResult.status === 'returned'" class="form-actions">
           <button type="button" class="btn-outline" @click="resetSearch">Search Again</button>
         </div>
       </div>
@@ -241,6 +241,7 @@ function statusLabel(status) {
   switch (status) {
     case 'open': return 'Open'
     case 'claimed': return 'Claimed'
+    case 'returned': return 'Returned'
     case 'closed': return 'Closed'
     default: return status
   }
@@ -351,7 +352,7 @@ function formatDate(dateStr) {
   width: 64px;
   height: 64px;
   border-radius: 50%;
-  background: rgba(84, 107, 65, 0.1);
+  background: rgba(11, 97, 170, 0.1);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -360,7 +361,7 @@ function formatDate(dateStr) {
 
 .search-card h3 {
   font-size: 24px;
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
   margin: 0;
 }
 
@@ -395,7 +396,7 @@ function formatDate(dateStr) {
 
 .search-input:focus {
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(84, 107, 65, 0.15);
+  box-shadow: 0 0 0 3px rgba(11, 97, 170, 0.14);
 }
 
 .search-input::placeholder {
@@ -427,23 +428,24 @@ function formatDate(dateStr) {
   border-radius: 100px;
   font-size: 11px;
   font-weight: 600;
-  background: rgba(153, 173, 122, 0.25);
-  color: var(--color-text-main);
+  background: rgba(11, 97, 170, 0.1);
+  color: var(--color-lost);
 }
 
 .type-found {
-  background: rgba(84, 107, 65, 0.15);
+  background: rgba(22, 163, 74, 0.12);
+  color: var(--color-found);
 }
 
 .type-dot {
   width: 5px;
   height: 5px;
   border-radius: 50%;
-  background: var(--color-text-muted);
+  background: var(--color-lost);
 }
 
 .type-found .type-dot {
-  background: var(--color-text-main);
+  background: var(--color-found);
 }
 
 .status-badge {
@@ -455,9 +457,10 @@ function formatDate(dateStr) {
   letter-spacing: 0.03em;
 }
 
-.status-open { background: rgba(153, 173, 122, 0.3); color: var(--color-text-main); }
-.status-claimed { background: rgba(220, 204, 172, 0.5); color: var(--color-text-main); }
-.status-closed { background: rgba(84, 107, 65, 0.1); color: var(--color-text-muted); }
+.status-open { background: rgba(11, 97, 170, 0.1); color: var(--color-lost); }
+.status-claimed { background: rgba(245, 158, 11, 0.14); color: #92400E; }
+.status-closed { background: rgba(55, 65, 81, 0.1); color: var(--color-closed); }
+.status-returned { background: rgba(22, 163, 74, 0.12); color: #166534; }
 
 .result-title {
   font-size: 20px;
@@ -484,9 +487,9 @@ function formatDate(dateStr) {
   flex-direction: column;
   gap: 2px;
   padding: 8px 12px;
-  background: rgba(220, 204, 172, 0.3);
+  background: var(--color-surface-soft);
   border-radius: 8px;
-  border: 1px solid rgba(220, 204, 172, 0.5);
+  border: 1px solid var(--color-bot-border);
 }
 
 .meta-label {
@@ -513,7 +516,7 @@ function formatDate(dateStr) {
   align-items: center;
   gap: 8px;
   padding: 12px 16px;
-  background: rgba(220, 204, 172, 0.4);
+  background: var(--color-warm-surface);
   border-radius: var(--radius-md);
   color: var(--color-text-main);
   font-size: 14px;
@@ -563,7 +566,7 @@ function formatDate(dateStr) {
 }
 
 .required {
-  color: #ef4444;
+  color: var(--color-danger);
 }
 
 .optional {
@@ -586,7 +589,7 @@ function formatDate(dateStr) {
 
 .form-group input:focus {
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(84, 107, 65, 0.15);
+  box-shadow: 0 0 0 3px rgba(11, 97, 170, 0.14);
 }
 
 .form-group input::placeholder {
@@ -600,7 +603,7 @@ function formatDate(dateStr) {
 }
 
 .error {
-  color: #ef4444;
+  color: var(--color-danger);
   font-size: 14px;
   font-weight: var(--font-weight-medium);
   text-align: center;
@@ -619,7 +622,7 @@ function formatDate(dateStr) {
   width: 80px;
   height: 80px;
   border-radius: 50%;
-  background: rgba(84, 107, 65, 0.1);
+  background: rgba(22, 163, 74, 0.12);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -630,7 +633,7 @@ function formatDate(dateStr) {
 .success-card h3 {
   font-size: 24px;
   margin: 0;
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
 }
 
 .success-details {
@@ -638,7 +641,7 @@ function formatDate(dateStr) {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  background: rgba(220, 204, 172, 0.2);
+  background: var(--color-surface-soft);
   border-radius: var(--radius-md);
   padding: 16px;
 }

@@ -12,9 +12,13 @@ from database import Item, SessionLocal
 
 logger = logging.getLogger(__name__)
 
-# ── Disable ChromaDB completely (membutuhkan download model 79MB) ──
-HAS_CHROMADB = False
-logger.warning("ChromaDB dinonaktifkan untuk mempercepat startup")
+# ── Feature flag untuk RAG ChromaDB ──
+# Default OFF agar startup cepat dan ringan.
+HAS_CHROMADB = os.getenv("ENABLE_RAG", "false").lower() in ("1", "true", "yes", "on")
+if HAS_CHROMADB:
+    logger.info("RAG ChromaDB diaktifkan via ENABLE_RAG=true")
+else:
+    logger.warning("RAG ChromaDB dinonaktifkan (ENABLE_RAG=false)")
 
 # ── Fallback: TF-IDF based search for when chromadb is not available ──
 try:

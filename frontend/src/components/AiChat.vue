@@ -2,9 +2,11 @@
   <div class="chat-wrapper">
     <div class="chat-header">
       <div class="header-title">
-        <div class="ai-badge">AI</div>
+        <div class="ai-badge">
+          <img src="../assets/chatbot-itk.svg" alt="Logo Chatbot ITK" />
+        </div>
         <div>
-          <h3>Assistant</h3>
+          <h3>ITK Assistant</h3>
           <p>ITK Lost & Found</p>
         </div>
       </div>
@@ -30,7 +32,7 @@
 
       <div v-for="(msg, i) in messages" :key="i" :class="['chat-msg', msg.role]">
         <div v-if="msg.role === 'ai'" class="msg-avatar">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1H2a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2z"/><circle cx="9" cy="13" r="1" fill="currentColor"/><circle cx="15" cy="13" r="1" fill="currentColor"/><path d="M9 17h6"/></svg>
+          <img src="../assets/chatbot-itk.svg" alt="Logo Chatbot ITK" />
         </div>
         <div class="msg-content">
           <div class="msg-text" v-html="formatMessage(msg.text)"></div>
@@ -40,7 +42,7 @@
 
       <div v-if="loading" class="chat-msg ai">
         <div class="msg-avatar">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1H2a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2z"/><circle cx="9" cy="13" r="1" fill="currentColor"/><circle cx="15" cy="13" r="1" fill="currentColor"/><path d="M9 17h6"/></svg>
+          <img src="../assets/chatbot-itk.svg" alt="Logo Chatbot ITK" />
         </div>
         <div class="msg-content">
           <div class="typing-indicator">
@@ -67,6 +69,7 @@
     </div>
     <form @submit.prevent="sendMessage" class="chat-input-form">
       <input
+        ref="chatInputRef"
         v-model="input"
         type="text"
         placeholder="Ketik perintah..."
@@ -81,7 +84,7 @@
 </template>
 
 <script setup>
-import { ref, nextTick } from 'vue'
+import { ref, nextTick, onMounted } from 'vue'
 import api from '../services/api.js'
 
 const emit = defineEmits(['data-changed'])
@@ -95,6 +98,7 @@ const pendingPhotoEdit = ref(null)
 const selectedFile = ref(null)
 const messagesContainer = ref(null)
 const activeItemCodeContext = ref(null)
+const chatInputRef = ref(null)
 
 const suggestions = [
   'Lihat laporan terbaru',
@@ -119,10 +123,32 @@ function formatMessage(text) {
     .replace(/\n/g, '<br>')
 }
 
+function normalizeIntentText(text) {
+  const base = (text || '').toLowerCase()
+  return base
+    .replace(/[^\w\s-]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .replace(/\bupdet\b/g, 'update')
+    .replace(/\bupdte\b/g, 'update')
+    .replace(/\bedti\b/g, 'edit')
+    .replace(/\budate\b/g, 'update')
+    .replace(/\bperbaharui\b/g, 'perbarui')
+    .replace(/\bgmbar\b/g, 'gambar')
+    .replace(/\bfto\b/g, 'foto')
+    .trim()
+}
+
 async function scrollToBottom() {
   await nextTick()
   if (messagesContainer.value) {
     messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
+  }
+}
+
+async function focusChatInput() {
+  await nextTick()
+  if (chatInputRef.value && !loading.value) {
+    chatInputRef.value.focus()
   }
 }
 
@@ -141,10 +167,19 @@ async function sendMessage() {
   loading.value = true
   await scrollToBottom()
 
+  const explainedByChat = maybeHandleEditCapabilitiesIntent(text)
+  if (explainedByChat) {
+    loading.value = false
+    await scrollToBottom()
+    await focusChatInput()
+    return
+  }
+
   const editedByChat = await maybeHandleEditPhotoIntent(text)
   if (editedByChat) {
     loading.value = false
     await scrollToBottom()
+    await focusChatInput()
     return
   }
 
@@ -182,11 +217,41 @@ async function sendMessage() {
   } finally {
     loading.value = false
     await scrollToBottom()
+    await focusChatInput()
   }
 }
 
+onMounted(() => {
+  focusChatInput()
+})
+
+function maybeHandleEditCapabilitiesIntent(text) {
+  const normalized = normalizeIntentText(text)
+  const hasEditIntent = /(edit|ubah|update|perbarui|ganti)/i.test(normalized)
+  const hasUniqueCode = /\bLF-[A-Z0-9]{4,}\b/i.test(text || '')
+  const hasFieldMention = /(nama barang|title|deskripsi|kategori|lokasi|nama pelapor|nama penemu|kontak|status|foto|gambar|image)/i.test(normalized)
+  const hasDirectValueChange = /(jadi|menjadi|ganti ke|ubah ke|statusnya)/i.test(normalized)
+  const asksEditFeatures =
+    ((/fitur/i.test(normalized) || /apa\s+aja|apa\s+saja/i.test(normalized)) && hasEditIntent) ||
+    (/bisa\s+edit/i.test(normalized) && /apa\s+aja|apa\s+saja/i.test(normalized))
+  const asksEditWithCodeButNoField =
+    hasEditIntent && hasUniqueCode && !hasFieldMention && !hasDirectValueChange
+
+  if (!(asksEditFeatures || asksEditWithCodeButNoField)) return false
+
+  messages.value.push({
+    role: 'ai',
+    text:
+      hasUniqueCode
+        ? 'Baik, kode uniknya sudah ada. Yang bisa diedit: 1) nama barang, 2) deskripsi, 3) kategori, 4) lokasi, 5) nama pelapor/penemu, 6) nomor kontak, 7) status (open/claimed/closed/returned), 8) foto (via upload foto). Bagian mana yang ingin diubah?'
+        : 'Untuk edit laporan, gunakan kode unik (contoh: LF-ABCD12). Yang bisa diedit: 1) nama barang, 2) deskripsi, 3) kategori, 4) lokasi, 5) nama pelapor/penemu, 6) nomor kontak, 7) status (open/claimed/closed/returned), 8) foto (via upload foto). Mau lanjut edit? Kirim kode uniknya ya.',
+    time: getTime(),
+  })
+  return true
+}
+
 async function maybeHandleEditPhotoIntent(text) {
-  const normalized = (text || '').toLowerCase()
+  const normalized = normalizeIntentText(text)
   const hasEditIntent = /(edit|ganti|ubah|update|perbarui)/i.test(normalized)
   const hasPhotoContext = /(foto|gambar|image)/i.test(normalized)
   const codeMatch = text.match(/\bLF-[A-Z0-9]{4,}\b/i)
@@ -230,7 +295,7 @@ function captureItemCodeContext(text) {
   if (!codeMatch) return
 
   const code = codeMatch[0].toUpperCase()
-  const normalized = (text || '').toLowerCase()
+  const normalized = normalizeIntentText(text)
   const editContext = /(edit|ubah|ganti|update|perbarui|laporan|barang)/i.test(normalized)
   const photoContext = /(foto|gambar|image)/i.test(normalized)
 
@@ -378,8 +443,9 @@ defineExpose({ sendMessageExt, setInputOnly });
   display: flex;
   align-items: center;
   padding: 20px 24px;
-  background: var(--gradient-dark);
+  background: var(--color-primary);
   color: var(--color-on-primary);
+  border-bottom: 4px solid var(--color-accent);
 }
 
 .header-title {
@@ -389,16 +455,22 @@ defineExpose({ sendMessageExt, setInputOnly });
 }
 
 .ai-badge {
-  width: 38px;
-  height: 38px;
+  width: 42px;
+  height: 42px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 12px;
-  background: var(--gradient-primary);
-  font-size: 13px;
-  font-weight: var(--font-weight-heavy);
-  letter-spacing: 0.05em;
+  border-radius: 14px;
+  background: var(--color-surface);
+  border: 2px solid var(--color-accent);
+  box-shadow: 0 8px 18px rgba(33, 37, 41, 0.18);
+}
+
+.ai-badge img {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 3px rgba(7, 59, 109, 0.28));
 }
 
 .header-title h3 {
@@ -407,7 +479,7 @@ defineExpose({ sendMessageExt, setInputOnly });
   font-size: 18px;
   font-weight: var(--font-weight-heavy);
   text-transform: uppercase;
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
   line-height: 1;
 }
 
@@ -424,9 +496,9 @@ defineExpose({ sendMessageExt, setInputOnly });
   margin-left: auto;
   width: 10px;
   height: 10px;
-  background-color: #00FF40;
+  background-color: var(--color-success);
   border-radius: 50%;
-  box-shadow: 0 0 8px rgba(0,255,64,0.5);
+  box-shadow: 0 0 8px rgba(22, 163, 74, 0.45);
   animation: pulse 2s infinite;
 }
 
@@ -437,7 +509,7 @@ defineExpose({ sendMessageExt, setInputOnly });
   display: flex;
   flex-direction: column;
   gap: 20px;
-  background: var(--color-light-gray);
+  background: var(--bg-color);
   min-height: 0;
 }
 
@@ -458,7 +530,7 @@ defineExpose({ sendMessageExt, setInputOnly });
   font-size: 72px;
   font-weight: 900;
   line-height: 0.85;
-  letter-spacing: -0.05em;
+  letter-spacing: 0;
   color: var(--color-lost);
   opacity: 0.15;
 }
@@ -467,7 +539,7 @@ defineExpose({ sendMessageExt, setInputOnly });
   font-size: 72px;
   font-weight: 900;
   line-height: 0.85;
-  letter-spacing: -0.05em;
+  letter-spacing: 0;
   color: var(--color-found);
   opacity: 0.15;
 }
@@ -502,9 +574,9 @@ defineExpose({ sendMessageExt, setInputOnly });
 }
 
 .suggestion-btn:hover {
-  background: var(--color-text-main);
+  background: var(--color-primary);
   color: var(--color-on-primary);
-  border-color: var(--color-text-main);
+  border-color: var(--color-primary);
   transform: translateX(4px);
 }
 
@@ -528,17 +600,24 @@ defineExpose({ sendMessageExt, setInputOnly });
 }
 
 .msg-avatar {
-  width: 32px;
-  height: 32px;
+  width: 34px;
+  height: 34px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--gradient-dark);
+  background: var(--color-primary);
   color: var(--color-on-primary);
-  border-radius: 10px;
+  border-radius: 11px;
   align-self: flex-end;
   margin-bottom: 4px;
   flex-shrink: 0;
+  box-shadow: 0 5px 14px rgba(11, 97, 170, 0.2);
+}
+
+.msg-avatar img {
+  width: 29px;
+  height: 29px;
+  object-fit: contain;
 }
 
 .msg-content {
@@ -576,15 +655,15 @@ defineExpose({ sendMessageExt, setInputOnly });
 }
 
 .chat-msg.user .msg-text {
-  background: var(--gradient-dark);
+  background: var(--color-primary);
   color: var(--color-on-primary);
   border-bottom-right-radius: 4px;
 }
 
 .chat-msg.ai .msg-text {
-  background: var(--color-surface);
+  background: var(--color-bot-bubble);
   color: var(--color-text-main);
-  border: 1.5px solid var(--color-border);
+  border: 1.5px solid var(--color-bot-border);
   border-top-left-radius: 4px;
   box-shadow: var(--shadow-sm);
 }
@@ -600,8 +679,8 @@ defineExpose({ sendMessageExt, setInputOnly });
   display: flex;
   gap: 5px;
   padding: 18px;
-  background: var(--color-surface);
-  border: 1.5px solid var(--color-border);
+  background: var(--color-bot-bubble);
+  border: 1.5px solid var(--color-bot-border);
   border-radius: var(--radius-md);
   border-top-left-radius: 4px;
 }
@@ -664,7 +743,7 @@ defineExpose({ sendMessageExt, setInputOnly });
 }
 
 .photo-upload-btn {
-  background: var(--gradient-primary);
+  background: var(--color-primary);
   color: var(--color-on-primary);
   flex: 1 1 180px;
 }
@@ -702,7 +781,7 @@ defineExpose({ sendMessageExt, setInputOnly });
 
 .chat-input:focus {
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(121, 174, 111, 0.15); /* Updated to match Sage theme */
+  box-shadow: 0 0 0 3px rgba(11, 97, 170, 0.14);
 }
 
 .chat-send-btn {
@@ -712,7 +791,7 @@ defineExpose({ sendMessageExt, setInputOnly });
   height: 40px;
   border: none;
   border-radius: 50%;
-  background: var(--gradient-primary);
+  background: var(--color-primary);
   color: var(--color-on-primary);
   display: flex;
   align-items: center;
@@ -723,7 +802,7 @@ defineExpose({ sendMessageExt, setInputOnly });
 
 .chat-send-btn:hover:not(:disabled) {
   transform: scale(1.08);
-  box-shadow: 0 4px 16px rgba(16,185,129,0.3);
+  box-shadow: 0 4px 16px rgba(11, 97, 170, 0.25);
 }
 
 .chat-send-btn:disabled {

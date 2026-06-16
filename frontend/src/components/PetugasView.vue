@@ -3,6 +3,7 @@
     <!-- Mobile Header -->
     <div class="mobile-header">
       <div class="mobile-brand">
+        <img class="mobile-brand-logo" src="../assets/itk/logo-itk-white-notext.webp" alt="Logo Institut Teknologi Kalimantan" />
         <span class="brand-itk">ITK</span>
         <span class="brand-lf">Lost & Found</span>
       </div>
@@ -16,6 +17,7 @@
       <div class="sidebar">
         <!-- Brand Card -->
         <div class="bento-card brand-card">
+          <img class="sidebar-itk-logo" src="../assets/itk/logo-itk-white-notext.webp" alt="Logo Institut Teknologi Kalimantan" />
           <h1>ITK</h1>
           <h1 class="brand-text">Lost</h1>
           <h1 class="brand-text">Found</h1>
@@ -88,11 +90,6 @@
             <ItemList :items="filteredItems" :user="user" @code-copied="code => $emit('code-copied', code)" @updated="refreshAllData" />
           </template>
 
-          <!-- Claimed Page -->
-          <template v-if="currentPage === 'claimed'">
-            <ItemList :items="claimedItems" :user="user" @updated="refreshAllData" />
-          </template>
-
           <!-- Claim Item Page -->
           <template v-if="currentPage === 'claim'">
             <ClaimItemView @claimed="refreshAllData" />
@@ -137,7 +134,6 @@ const claimHistoryRef = ref(null)
 const navItems = [
   { id: 'dashboard', label: 'Dashboard', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>' },
   { id: 'items', label: 'Items', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7h-9"/><path d="M14 17H5"/><circle cx="17" cy="17" r="3"/><circle cx="7" cy="7" r="3"/></svg>' },
-  { id: 'claimed', label: 'Claimed', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>' },
   { id: 'claim', label: 'Claim Item', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>' },
   { id: 'history', label: 'History', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>' },
   { id: 'report', label: 'Report', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>' },
@@ -146,7 +142,6 @@ const navItems = [
 const navConfig = {
   dashboard: { title: 'Dashboard', subtitle: 'Overview of lost & found reports', bg: 'bg-primary' },
   items: { title: 'All Items', subtitle: 'Lost & Found items by category', bg: 'bg-primary' },
-  claimed: { title: 'Claimed Items', subtitle: 'Items that have been picked up', bg: 'bg-claimed' },
   claim: { title: 'Claim Item', subtitle: 'Process item pickup confirmation', bg: 'bg-accent' },
   history: { title: 'Claim History', subtitle: 'Record of all processed claims', bg: 'bg-primary' },
   report: { title: 'Report', subtitle: 'Create a lost or found item report', bg: 'bg-accent' },
@@ -166,18 +161,20 @@ const dashboardData = ref({
 const allItems = ref([])
 const lostItems = computed(() => allItems.value.filter(i => i.type === 'lost'))
 const foundItems = computed(() => allItems.value.filter(i => i.type === 'found'))
-const claimedItems = computed(() => allItems.value.filter(i => i.status === 'claimed' || i.status === 'closed'))
+const claimedItems = computed(() => allItems.value.filter(i => i.status === 'claimed' || i.status === 'closed' || i.status === 'returned'))
 
 const itemTab = ref('all')
 const itemTabs = [
   { value: 'all', label: 'All' },
   { value: 'lost', label: 'Lost' },
   { value: 'found', label: 'Found' },
+  { value: 'claimed', label: 'Claimed' },
 ]
 const filteredItems = computed(() => {
   if (itemTab.value === 'all') return allItems.value
   if (itemTab.value === 'lost') return lostItems.value
   if (itemTab.value === 'found') return foundItems.value
+  if (itemTab.value === 'claimed') return claimedItems.value
   return allItems.value
 })
 
@@ -248,21 +245,30 @@ onMounted(() => {
 .mobile-brand {
   display: flex;
   gap: 6px;
-  align-items: baseline;
+  align-items: center;
+}
+
+.mobile-brand-logo {
+  width: 24px;
+  height: 28px;
+  object-fit: contain;
+  padding: 3px;
+  border-radius: 8px;
+  background: var(--color-primary);
 }
 
 .brand-itk {
   font-size: 20px;
   font-weight: 900;
   color: var(--color-primary);
-  letter-spacing: -0.04em;
+  letter-spacing: 0;
 }
 
 .brand-lf {
   font-size: 20px;
   font-weight: 900;
   color: var(--color-text-muted);
-  letter-spacing: -0.04em;
+  letter-spacing: 0;
 }
 
 .hamburger {
@@ -325,39 +331,43 @@ onMounted(() => {
   justify-content: center;
   text-align: center;
   border: 2px solid var(--color-border);
-  box-shadow: 0 4px 16px rgba(84, 107, 65, 0.1);
+  box-shadow: var(--shadow-sm);
 }
 
 .brand-card {
-  padding: 28px 16px;
-  background: var(--gradient-dark);
+  padding: 22px 16px 24px;
+  background: var(--color-primary);
   color: var(--color-on-primary);
   position: relative;
   overflow: hidden;
+  border-color: var(--color-primary);
+  border-bottom: 4px solid var(--color-accent);
 }
 
 .brand-card::after {
-  content: '';
-  position: absolute;
-  top: -50%;
-  left: -50%;
-  width: 200%;
-  height: 200%;
-  background: radial-gradient(circle at 30% 30%, rgba(153,173,122,0.2) 0%, transparent 60%);
-  pointer-events: none;
+  display: none;
 }
 
 .brand-card h1 {
-  font-size: 28px;
+  font-size: 24px;
   margin: 0;
   line-height: 0.9;
-  letter-spacing: -3px;
+  letter-spacing: 0;
+  position: relative;
+  z-index: 1;
+}
+
+.sidebar-itk-logo {
+  width: 58px;
+  height: 68px;
+  object-fit: contain;
+  margin-bottom: 12px;
   position: relative;
   z-index: 1;
 }
 
 .brand-text {
-  color: #99AD7A;
+  color: var(--color-accent);
   margin-top: -2px !important;
 }
 
@@ -403,9 +413,9 @@ onMounted(() => {
 }
 
 .nav-item.active {
-  background: var(--gradient-dark);
+  background: var(--color-primary);
   color: var(--color-on-primary);
-  box-shadow: 0 4px 16px rgba(14,14,14,0.2);
+  box-shadow: 0 4px 16px rgba(11, 97, 170, 0.22);
 }
 
 .nav-item.active .nav-icon {
@@ -443,30 +453,30 @@ onMounted(() => {
   border-radius: var(--radius-xl);
   overflow: hidden;
   transition: background 0.5s ease;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-md);
 }
 
 .bg-primary { 
-  background: linear-gradient(135deg, #FFF8EC 0%, #F5EFE1 100%); 
-  color: var(--color-primary); 
+  background: var(--bg-color); 
+  color: var(--color-text-main); 
 }
 .bg-lost { 
-  background: linear-gradient(135deg, #FFF8EC 0%, #F5EFE1 100%); 
+  background: var(--color-primary-subtle); 
   color: var(--color-text-main);
-  border: 1px solid rgba(84, 107, 65, 0.1);
+  border: 1px solid rgba(11, 97, 170, 0.14);
 }
 .bg-found { 
-  background: linear-gradient(135deg, #FFF8EC 0%, #F5EFE1 100%); 
+  background: #D1E7DD; 
   color: var(--color-text-main);
-  border: 1px solid rgba(84, 107, 65, 0.1);
+  border: 1px solid rgba(22, 163, 74, 0.16);
 }
 .bg-claimed { 
-  background: linear-gradient(135deg, #F9F1E6 0%, #EFE5D9 100%); 
+  background: var(--color-accent-subtle); 
   color: var(--color-text-main);
-  border: 1px solid rgba(220, 204, 172, 0.3);
+  border: 1px solid rgba(245, 183, 90, 0.24);
 }
 .bg-accent { 
-  background: linear-gradient(135deg, #F0F4EC 0%, #E2ECD8 100%); 
+  background: var(--color-surface); 
   color: var(--color-primary); 
 }
 
@@ -482,8 +492,23 @@ onMounted(() => {
   font-size: clamp(3rem, 6vw, 5rem);
   margin: 0;
   line-height: 0.9;
-  letter-spacing: -0.04em;
+  letter-spacing: 0;
   text-transform: uppercase;
+  color: var(--color-primary);
+  width: fit-content;
+  padding-bottom: 14px;
+  position: relative;
+}
+
+.header-text h2::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 5px;
+  background: var(--color-accent);
+  border-radius: var(--radius-pill);
 }
 
 .header-subtitle {
@@ -491,7 +516,7 @@ onMounted(() => {
   font-weight: var(--font-weight-medium);
   margin-top: 16px;
   opacity: 0.95;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  color: var(--color-text-muted);
 }
 
 .header-date {
@@ -500,11 +525,11 @@ onMounted(() => {
   text-transform: uppercase;
   letter-spacing: 0.02em;
   padding: 8px 16px;
-  border: 1px solid rgba(84, 107, 65, 0.2);
+  border: 1px solid rgba(11, 97, 170, 0.18);
   border-radius: var(--radius-pill);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  background: rgba(84, 107, 65, 0.05);
+  background: rgba(11, 97, 170, 0.06);
   color: var(--color-primary);
 }
 
@@ -533,7 +558,7 @@ onMounted(() => {
 .logout-link {
   background: none;
   border: none;
-  color: #ef4444;
+  color: var(--color-danger);
   font-weight: bold;
   cursor: pointer;
   padding: 8px;
@@ -545,13 +570,14 @@ onMounted(() => {
 
 .items-tabs {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   padding: 4px;
   background: var(--color-surface);
   border-radius: var(--radius-lg);
   width: fit-content;
   border: 2px solid var(--color-border);
-  box-shadow: 0 4px 12px rgba(84, 107, 65, 0.1);
+  box-shadow: var(--shadow-sm);
 }
 
 .tab-btn {
@@ -568,13 +594,13 @@ onMounted(() => {
 
 .tab-btn:hover {
   color: var(--color-text-main);
-  background: rgba(220, 204, 172, 0.3);
+  background: var(--color-surface-soft);
 }
 
 .tab-btn.active {
   background: var(--color-primary);
   color: var(--color-on-primary);
-  box-shadow: 0 4px 12px rgba(84, 107, 65, 0.25);
+  box-shadow: 0 4px 12px rgba(11, 97, 170, 0.25);
 }
 
 /* ── Mobile Overlay ────────────────── */

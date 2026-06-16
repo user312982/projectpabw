@@ -59,13 +59,13 @@ function handleLogout() {
   align-items: center;
   height: 100vh;
   gap: 20px;
-  color: white;
-  background: var(--bg-color, #1a1a1a);
+  color: var(--color-text-main);
+  background: var(--bg-color, #F7F9FC);
 }
 .btn {
   padding: 10px 20px;
-  background: var(--color-primary, #10b981);
-  color: white;
+  background: var(--color-primary, #0B61AA);
+  color: var(--color-on-primary, #FFFFFF);
   border: none;
   border-radius: 8px;
   cursor: pointer;

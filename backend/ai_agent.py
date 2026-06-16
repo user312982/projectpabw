@@ -45,6 +45,7 @@ from database import (
 )
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
 from langchain_core.tools import tool
+# pyrefly: ignore [missing-import]
 from langchain_deepseek import ChatDeepSeek
 from pydantic import BaseModel, Field
 from rag import rag_system
@@ -147,6 +148,10 @@ class UpdateItemInput(BaseModel):
     description: Optional[str] = Field(
         default=None, description="Deskripsi baru (jika ingin diubah)"
     )
+    category: Optional[str] = Field(
+        default=None,
+        description="Kategori baru: elektronik/pakaian/dokumen/aksesoris/tas/kunci/lainnya",
+    )
     location: Optional[str] = Field(
         default=None, description="Lokasi baru (jika ingin diubah)"
     )
@@ -157,7 +162,7 @@ class UpdateItemInput(BaseModel):
         default=None, description="Kontak pelapor/penemu baru (jika ingin diubah)"
     )
     status: Optional[str] = Field(
-        default=None, description="Status laporan: open/claimed/closed"
+        default=None, description="Status laporan: open/claimed/closed/returned"
     )
 
 
@@ -625,6 +630,7 @@ def update_item_tool(
     unique_code: str,
     title: Optional[str] = None,
     description: Optional[str] = None,
+    category: Optional[str] = None,
     location: Optional[str] = None,
     reporter_name: Optional[str] = None,
     reporter_contact: Optional[str] = None,
@@ -644,6 +650,8 @@ def update_item_tool(
             item.title = title.strip()
         if description:
             item.description = description.strip()
+        if category:
+            item.category = category.strip()
         if location:
             item.location = location.strip()
         if reporter_name:
@@ -747,6 +755,19 @@ Untuk MELAPORKAN BARANG DITEMUKAN, WAJIB ditanyakan dan diisi:
 ### 3a. PERHATIAN: EDIT/HAPUS HANYA UNTUK PEMBUAT LAPORAN:
 - `update_item_tool` dan `delete_item_tool` akan otomatis ditolak jika user bukan pembuat laporan (atau petugas).
 - Jika sistem mengembalikan error izin, beri tahu user bahwa mereka tidak bisa mengubah/menghapus laporan orang lain.
+
+### 3b. SAAT USER BERTANYA "BISA EDIT APA SAJA?":
+- Jelaskan bahwa edit data laporan mencakup:
+  1) nama barang (`title`)
+  2) deskripsi
+  3) kategori
+  4) lokasi
+  5) nama pelapor/penemu
+  6) nomor kontak
+  7) status (`open/claimed/closed/returned`)
+- Jelaskan juga bahwa FOTO juga bisa diganti, tetapi lewat alur upload foto terpisah (tetap butuh kode unik laporan).
+- Setelah menjelaskan daftar fitur, tanyakan kode unik laporan user.
+- Jika user SUDAH memberi kode unik untuk edit tetapi belum menyebut field mana yang ingin diubah, WAJIB balas dengan daftar 8 opsi di atas (termasuk foto) lalu tanya "Bagian mana yang ingin diubah?".
 
 ### 4. JIKA BINGUNG ATAU TIDAK PAHAM:
 - Jika tidak mengerti pertanyaan user, KATAKAN: "Maaf, saya kurang memahami maksud Anda. Bisa dijelaskan dengan lebih detail? Saya bisa membantu melaporkan barang hilang/ditemukan atau mencari barang."

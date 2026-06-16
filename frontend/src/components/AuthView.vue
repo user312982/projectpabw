@@ -2,7 +2,8 @@
   <div class="auth-container">
     <div class="auth-card bento-card">
       <div class="brand-header">
-        <img class="brand-logo" src="../assets/logo-itk-lostfound.svg" alt="ITK Lost & Found Logo" />
+        <img class="brand-logo" src="../assets/itk/logo-itk-white-notext.webp" alt="Logo Institut Teknologi Kalimantan" />
+        <span class="brand-kicker">Institut Teknologi Kalimantan</span>
         <h1>ITK <span class="brand-text">Lost & Found</span></h1>
         <p>Login untuk mengakses sistem</p>
       </div>
@@ -158,6 +159,21 @@ async function handleRegister() {
   min-height: 100vh;
   background: var(--bg-color); /* as assumed in App.vue */
   padding: 20px;
+  position: relative;
+  overflow: hidden;
+}
+.auth-container::before {
+  content: '';
+  position: absolute;
+  left: -160px;
+  bottom: -110px;
+  width: min(620px, 72vw);
+  aspect-ratio: 1148 / 584;
+  background-image: url('../assets/itk/gear-blue-half.webp');
+  background-size: contain;
+  background-repeat: no-repeat;
+  opacity: 0.08;
+  pointer-events: none;
 }
 .auth-card {
   width: 100%;
@@ -166,20 +182,34 @@ async function handleRegister() {
   padding: 40px;
   border-radius: 24px;
   box-shadow: 0 10px 30px rgba(0,0,0,0.05); /* slightly soften visually */
+  position: relative;
+  z-index: 1;
 }
 .brand-header {
   text-align: center;
   margin-bottom: 30px;
 }
 .brand-logo {
-  width: 56px;
-  height: 56px;
+  width: 58px;
+  height: 68px;
+  object-fit: contain;
+  padding: 6px;
+  border-radius: 14px;
+  background: var(--color-primary);
   margin-bottom: 10px;
+}
+.brand-kicker {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--color-primary);
+  font-size: 12px;
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.02em;
 }
 .brand-header h1 {
   font-size: 32px;
   margin: 0;
-  letter-spacing: -1px;
+  letter-spacing: 0;
 }
 .brand-text {
   color: var(--color-primary);
@@ -205,7 +235,7 @@ async function handleRegister() {
   border-radius: 12px;
   font-size: 14px;
   transition: border-color 0.2s;
-  background: #fdfdfd;
+  background: var(--color-surface);
 }
 .form-group input:focus {
   outline: none;
@@ -217,7 +247,7 @@ async function handleRegister() {
   border: none;
   font-weight: bold;
   cursor: pointer;
-  background: var(--gradient-primary);
+  background: var(--color-primary);
   color: var(--color-on-primary);
   font-size: 16px;
   margin-top: 10px;
@@ -238,13 +268,13 @@ async function handleRegister() {
   font-weight: 600;
 }
 .error {
-  color: #ef4444;
+  color: var(--color-danger);
   text-align: center;
   font-size: 14px;
   font-weight: 500;
 }
 .field-error {
-  color: #ef4444;
+  color: var(--color-danger);
   font-size: 12px;
   margin-top: -4px;
 }

@@ -126,14 +126,14 @@ defineExpose({ refresh: fetchClaims })
   width: 80px;
   height: 80px;
   border-radius: 50%;
-  background: rgba(84, 107, 65, 0.08);
+  background: rgba(11, 97, 170, 0.08);
   color: var(--color-text-muted);
   margin-bottom: 16px;
 }
 
 .empty-state h3 {
   font-size: 24px;
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
   margin: 0 0 8px;
   color: var(--color-text-main);
 }
@@ -169,14 +169,14 @@ defineExpose({ refresh: fetchClaims })
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--color-text-muted);
-  background: rgba(84, 107, 65, 0.05);
+  background: var(--color-surface-soft);
   border-bottom: 2px solid var(--color-border);
   white-space: nowrap;
 }
 
 .claims-table td {
   padding: 12px 16px;
-  border-bottom: 1px solid rgba(220, 204, 172, 0.4);
+  border-bottom: 1px solid var(--color-border);
   vertical-align: middle;
   color: var(--color-text-main);
 }
@@ -186,7 +186,7 @@ defineExpose({ refresh: fetchClaims })
 }
 
 .claim-row:hover {
-  background: rgba(84, 107, 65, 0.04);
+  background: rgba(11, 97, 170, 0.04);
 }
 
 .claim-row:last-child td {
@@ -220,7 +220,7 @@ defineExpose({ refresh: fetchClaims })
 .nim-code {
   font-family: 'SF Mono', 'Consolas', 'Monaco', monospace;
   font-size: 12px;
-  background: rgba(220, 204, 172, 0.3);
+  background: var(--color-surface-soft);
   padding: 2px 6px;
   border-radius: 4px;
   color: var(--color-text-main);

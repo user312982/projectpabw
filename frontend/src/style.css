@@ -1,47 +1,64 @@
-/* ── Sage Green Minimalist Palette ─────────────────────────────── */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+/* ── ITK Official-Inspired Palette ──────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800;900&display=swap');
 
 :root {
   /* Core Backgrounds */
-  --bg-color: #DCCCAC;          /* Warm Beige */
-  --color-surface: #FFF8EC;     /* Cream for cards */
-  --color-surface-hover: #99AD7A; /* Medium Green for hover */
+  --bg-color: #F8F9FA;
+  --color-surface: #FFFFFF;
+  --color-surface-soft: #F8F9FA;
+  --color-surface-hover: #FDF1DE;
+  --color-warm-surface: #FDF1DE;
+  --color-bot-bubble: #FFFFFF;
+  --color-bot-border: #CEDFEE;
 
   /* Text Accents */
-  --color-text-main: #546B41;   /* Dark Green */
-  --color-text-muted: #99AD7A;  /* Medium Green */
+  --color-text-main: #212529;
+  --color-text-muted: #6C757D;
 
   /* Borders / Separators */
-  --color-border: #DCCCAC;      /* Beige */
+  --color-border: #DEE2E6;
 
   /* Primary Accent */
-  --color-primary: #546B41;     /* Dark Green */
-  --color-primary-dark: #3d4f2f;
-  --color-on-primary: #FFF8EC;  /* Cream text on green */
+  --color-primary: #0A61AA;
+  --color-primary-dark: #084E88;
+  --color-primary-subtle: #CEDFEE;
+  --color-accent: #F5B759;
+  --color-accent-dark: #D99A35;
+  --color-accent-subtle: #FDF1DE;
+  --color-on-primary: #FFFFFF;
+  --color-on-accent: #212529;
+
+  /* Semantic Colors */
+  --color-success: #198754;
+  --color-warning: #F5B759;
+  --color-danger: #DC3545;
+  --color-info: #0DCAF0;
+  --color-neutral-dark: #343A40;
 
   /* Status Colors */
-  --color-lost: #546B41;
-  --color-found: #546B41;
-  --color-claimed: #546B41;
+  --color-lost: var(--color-primary);
+  --color-found: var(--color-success);
+  --color-claimed: var(--color-warning);
+  --color-closed: var(--color-neutral-dark);
 
   /* Raw Neutral Fallbacks */
-  --color-white: #FFF8EC;
-  --color-black: #546B41;
+  --color-white: #FFFFFF;
+  --color-black: #212529;
   --color-gray: var(--color-border);
   --color-dark-gray: var(--color-text-muted);
-  --color-light-gray: #E8DFC8;
+  --color-light-gray: #F8F9FA;
 
-  /* Gradients */
-  --gradient-primary: linear-gradient(135deg, #546B41 0%, #3d4f2f 100%);
-  --gradient-lost: linear-gradient(135deg, rgba(84, 107, 65, 0.15) 0%, rgba(84, 107, 65, 0.08) 100%);
-  --gradient-found: linear-gradient(135deg, rgba(153, 173, 122, 0.25) 0%, rgba(153, 173, 122, 0.12) 100%);
-  --gradient-accent: linear-gradient(135deg, #99AD7A 0%, #7a8f5f 100%);
-  --gradient-dark: linear-gradient(135deg, #3d4f2f 0%, #546B41 100%);
-  --gradient-warm: linear-gradient(135deg, rgba(220, 204, 172, 0.4) 0%, rgba(220, 204, 172, 0.2) 100%);
-  --gradient-glass: rgba(255, 248, 236, 0.85);
+  /* Legacy background aliases kept flat to match the ITK site style. */
+  --gradient-primary: #0A61AA;
+  --gradient-lost: #CEDFEE;
+  --gradient-found: #D1E7DD;
+  --gradient-accent: #F5B759;
+  --gradient-dark: #0A61AA;
+  --gradient-warm: #FDF1DE;
+  --gradient-glass: rgba(255, 255, 255, 0.85);
 
   /* Typography */
-  --font-main: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-main: 'Figtree', system-ui, -apple-system, sans-serif;
   --font-weight-heavy: 700;
   --font-weight-bold: 600;
   --font-weight-medium: 500;
@@ -55,9 +72,9 @@
   --radius-pill: 9999px;
 
   /* Shadows */
-  --shadow-sm: 0 1px 3px rgba(84, 107, 65, 0.08);
-  --shadow-md: 0 4px 12px rgba(84, 107, 65, 0.1);
-  --shadow-lg: 0 12px 24px rgba(84, 107, 65, 0.12);
+  --shadow-sm: 0 1px 3px rgba(33, 37, 41, 0.08);
+  --shadow-md: 0 8px 20px rgba(33, 37, 41, 0.08);
+  --shadow-lg: 0 14px 30px rgba(33, 37, 41, 0.12);
 
   font-family: var(--font-main);
   font-size: 14px;
@@ -94,7 +111,7 @@ body {
 h1,h2,h3,h4 {
   font-family: var(--font-main);
   font-weight: var(--font-weight-heavy);
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
   line-height: 1.2;
   color: var(--color-text-main);
 }
@@ -109,7 +126,7 @@ h1,h2,h3,h4 {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--color-text-muted);
+  background: #ADB5BD;
   border-radius: var(--radius-pill);
 }
 ::-webkit-scrollbar-thumb:hover {
@@ -169,15 +186,15 @@ h1,h2,h3,h4 {
 }
 
 .badge-lost {
-  background: rgba(84, 107, 65, 0.1);
+  background: rgba(11, 97, 170, 0.1);
   color: var(--color-lost);
-  border-color: rgba(84, 107, 65, 0.2);
+  border-color: rgba(11, 97, 170, 0.2);
 }
 
 .badge-found {
-  background: rgba(153, 173, 122, 0.2);
+  background: rgba(22, 163, 74, 0.12);
   color: var(--color-found);
-  border-color: rgba(153, 173, 122, 0.3);
+  border-color: rgba(22, 163, 74, 0.24);
 }
 
 .badge-open {
@@ -187,9 +204,9 @@ h1,h2,h3,h4 {
 }
 
 .badge-claimed {
-  background: rgba(220, 204, 172, 0.4);
+  background: rgba(245, 158, 11, 0.12);
   color: var(--color-claimed);
-  border-color: rgba(220, 204, 172, 0.6);
+  border-color: rgba(245, 158, 11, 0.24);
 }
 
 .badge-closed {

@@ -214,6 +214,7 @@ async function submitForm() {
   animation: scaleIn 0.4s ease;
   position: relative;
   overflow: hidden;
+  border: 1px solid var(--color-border);
 }
 
 .report-form-wrapper::before {
@@ -223,7 +224,7 @@ async function submitForm() {
   left: 0;
   right: 0;
   height: 4px;
-  background: var(--gradient-accent);
+  background: var(--color-accent);
 }
 
 .form-header {
@@ -237,8 +238,8 @@ async function submitForm() {
   width: 52px;
   height: 52px;
   border-radius: 16px;
-  background: var(--gradient-accent);
-  color: var(--color-on-primary);
+  background: var(--color-accent);
+  color: var(--color-on-accent);
   margin-bottom: 16px;
 }
 
@@ -246,7 +247,7 @@ async function submitForm() {
   font-size: 28px;
   font-weight: var(--font-weight-heavy);
   text-transform: uppercase;
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
   margin: 0;
   color: var(--color-text-main);
 }
@@ -303,7 +304,7 @@ async function submitForm() {
 
 .form-input:focus {
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 4px rgba(84, 107, 65, 0.1);
+  box-shadow: 0 0 0 4px rgba(11, 97, 170, 0.12);
   background: var(--color-surface);
 }
 
@@ -340,24 +341,24 @@ async function submitForm() {
 }
 
 .type-btn.active.lost {
-  background: var(--gradient-lost);
-  color: var(--color-text-main);
-  border-color: rgba(84, 107, 65, 0.3);
-  box-shadow: 0 4px 16px rgba(84, 107, 65, 0.15);
+  background: var(--color-primary-subtle);
+  color: var(--color-lost);
+  border-color: rgba(11, 97, 170, 0.28);
+  box-shadow: 0 4px 16px rgba(11, 97, 170, 0.14);
 }
 
 .type-btn.active.found {
-  background: var(--gradient-found);
-  color: var(--color-text-main);
-  border-color: rgba(153, 173, 122, 0.4);
-  box-shadow: 0 4px 16px rgba(153, 173, 122, 0.2);
+  background: #D1E7DD;
+  color: var(--color-found);
+  border-color: rgba(22, 163, 74, 0.28);
+  box-shadow: 0 4px 16px rgba(22, 163, 74, 0.14);
 }
 
 .submit-btn {
   padding: 16px;
   border: none;
   border-radius: var(--radius-pill);
-  background: var(--gradient-dark);
+  background: var(--color-primary);
   color: var(--color-on-primary);
   font-weight: var(--font-weight-bold);
   font-size: 15px;
@@ -369,7 +370,7 @@ async function submitForm() {
 }
 
 .submit-btn:hover:not(:disabled) {
-  box-shadow: 0 8px 24px rgba(14,14,14,0.25);
+  box-shadow: 0 8px 24px rgba(11, 97, 170, 0.25);
   transform: translateY(-2px);
 }
 
@@ -410,8 +411,8 @@ async function submitForm() {
 }
 
 .status-msg.success {
-  background: #D1FAE5;
-  color: #065F46;
+  background: #DCFCE7;
+  color: #166534;
 }
 
 .status-msg.error {

@@ -49,6 +49,7 @@ class ItemStatus(str, enum.Enum):
     open = "open"
     claimed = "claimed"
     closed = "closed"
+    returned = "returned"
 
 
 class User(Base):
@@ -107,6 +108,7 @@ class Item(Base):
 
     klaims = relationship("KlaimBarang", back_populates="item")
     uploader = relationship("User", back_populates="items")
+    events = relationship("ItemEvent", back_populates="item")
 
     def __repr__(self):
         return f"<Item {self.title} | {self.type} | {self.status}>"
@@ -166,6 +168,35 @@ class KlaimBarang(Base):
         }
 
 
+class ItemEvent(Base):
+    __tablename__ = "item_events"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    item_id = Column(Integer, ForeignKey("items.id"), nullable=False, index=True)
+    event_type = Column(String(50), nullable=False)
+    event_label = Column(String(255), nullable=False)
+    event_note = Column(Text, nullable=True)
+    actor_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    actor_name_snapshot = Column(String(255), nullable=True)
+    metadata_json = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+    item = relationship("Item", back_populates="events")
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "item_id": self.item_id,
+            "event_type": self.event_type,
+            "event_label": self.event_label,
+            "event_note": self.event_note,
+            "actor_id": self.actor_id,
+            "actor_name_snapshot": self.actor_name_snapshot,
+            "metadata_json": self.metadata_json,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }
+
+
 class TokenBlacklist(Base):
     __tablename__ = "token_blacklist"
 
@@ -187,6 +218,7 @@ def init_db():
     _migrate_user_new_columns()
     _migrate_kontak_nullable()
     _migrate_item_photo_columns()
+    _migrate_item_events_table()
 
 
 def _migrate_reporter_name_nullable():
@@ -291,6 +323,32 @@ def _migrate_item_photo_columns():
         with engine.begin() as conn:
             for stmt in statements:
                 conn.execute(text(stmt))
+
+
+def _migrate_item_events_table():
+    from sqlalchemy import inspect, text
+
+    inspector = inspect(engine)
+    if "item_events" in inspector.get_table_names():
+        return
+
+    with engine.begin() as conn:
+        conn.execute(text(
+            "CREATE TABLE item_events ("
+            "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+            "item_id INTEGER NOT NULL, "
+            "event_type VARCHAR(50) NOT NULL, "
+            "event_label VARCHAR(255) NOT NULL, "
+            "event_note TEXT, "
+            "actor_id INTEGER, "
+            "actor_name_snapshot VARCHAR(255), "
+            "metadata_json TEXT, "
+            "created_at DATETIME, "
+            "FOREIGN KEY(item_id) REFERENCES items(id), "
+            "FOREIGN KEY(actor_id) REFERENCES users(id))"
+        ))
+        conn.execute(text("CREATE INDEX ix_item_events_id ON item_events(id)"))
+        conn.execute(text("CREATE INDEX ix_item_events_item_id_created_at ON item_events(item_id, created_at DESC)"))
 
 
 def get_db():

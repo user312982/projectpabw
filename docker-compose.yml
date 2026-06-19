@@ -1,26 +1,75 @@
 services:
   backend:
     build: ./backend
-    # ports:
-    #   - "8000:8000"
+    container_name: lostfound-backend
     env_file:
       - .env
+    ports:
+      - "127.0.0.1:8002:8000"
     volumes:
       - ./data:/app/data
       - ./backend/uploads:/app/uploads
     restart: unless-stopped
     networks:
       - caddy_network
+    
+    # === Security ===
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+    # === Resource Limits ===
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 400M
+        reservations:
+          memory: 128M
+
+    # === Log Limit ===
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   frontend:
     build: ./frontend
-    # ports:
-    #   - "3000:3000"
+    container_name: lostfound-frontend
     depends_on:
       - backend
+    ports:
+      - "127.0.0.1:3002:3000"
     restart: unless-stopped
     networks:
       - caddy_network
+
+    # === Security ===
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+      - CHOWN
+      - SETGID
+      - SETUID
+
+    # === Resource Limits ===
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 128M
+
+    # === Log Limit ===
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "3"
 
 networks:
   caddy_network:

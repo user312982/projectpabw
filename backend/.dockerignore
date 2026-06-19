@@ -1,9 +1,13 @@
 .env
+.env.example
 __pycache__
 *.pyc
 .git
+.gitignore
 .venv
 venv
 data
 uploads
 .pytest_cache
+Dockerfile
+README.md
